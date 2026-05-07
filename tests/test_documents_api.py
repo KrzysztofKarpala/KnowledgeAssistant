@@ -117,3 +117,62 @@ async def test_update_document_rejects_invalid_status(api_client):
     )
 
     assert update_response.status_code == 422
+
+
+async def test_create_document_with_parent_id(api_client):
+    parent_response = await api_client.post(
+        "/documents?index=false",
+        json={
+            "title": "Parent Document Test",
+            "content": "General parent document.",
+        },
+    )
+    assert parent_response.status_code == 201
+    parent_id = parent_response.json()["id"]
+
+    child_response = await api_client.post(
+        "/documents?index=false",
+        json={
+            "title": "Child Document Test",
+            "content": "Specific child document.",
+            "parent_id": parent_id,
+        },
+    )
+    assert child_response.status_code == 201
+
+    get_response = await api_client.get(f"/documents/{child_response.json()['id']}")
+
+    assert get_response.status_code == 200
+    assert get_response.json()["parent_id"] == parent_id
+
+
+async def test_create_document_rejects_missing_parent_id(api_client):
+    response = await api_client.post(
+        "/documents?index=false",
+        json={
+            "title": "Missing Parent Test",
+            "content": "Child document.",
+            "parent_id": "00000000-0000-0000-0000-000000000000",
+        },
+    )
+
+    assert response.status_code == 400
+
+
+async def test_update_document_rejects_self_parent(api_client):
+    create_response = await api_client.post(
+        "/documents?index=false",
+        json={
+            "title": "Self Parent Test",
+            "content": "Document content.",
+        },
+    )
+    assert create_response.status_code == 201
+    document_id = create_response.json()["id"]
+
+    update_response = await api_client.patch(
+        f"/documents/{document_id}",
+        json={"parent_id": document_id},
+    )
+
+    assert update_response.status_code == 400

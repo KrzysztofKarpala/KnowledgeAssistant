@@ -17,6 +17,7 @@ class DocumentRepository:
         *,
         title: str,
         content: str,
+        parent_id: UUID | None,
         version: str | None,
         effective_from: Any,
         metadata: dict[str, Any],
@@ -24,6 +25,7 @@ class DocumentRepository:
         document = Document.create(
             title=title,
             content=content,
+            parent_id=parent_id,
             version=version,
             effective_from=effective_from,
             metadata=metadata,

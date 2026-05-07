@@ -43,6 +43,33 @@ class ChunkRepository:
         )
         return len(result.all())
 
+    async def search_similar_for_document(
+        self,
+        *,
+        document_id: UUID,
+        embedding: list[float],
+        active_only: bool = True,
+    ) -> tuple[DocumentChunk, Document, float] | None:
+        distance = DocumentChunk.embedding.cosine_distance(embedding).label("distance")
+        statement = (
+            select(DocumentChunk, Document, distance)
+            .join(Document, Document.id == DocumentChunk.document_id)
+            .where(DocumentChunk.document_id == document_id)
+            .order_by(distance.asc(), DocumentChunk.chunk_index.asc())
+            .limit(1)
+        )
+
+        if active_only:
+            statement = statement.where(Document.status == DocumentStatus.ACTIVE)
+
+        result = await self.session.execute(statement)
+        row = result.first()
+        if row is None:
+            return None
+
+        chunk, document, raw_distance = row
+        return chunk, document, float(raw_distance)
+
     async def search_similar(
         self,
         *,

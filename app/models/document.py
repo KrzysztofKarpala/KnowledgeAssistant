@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Date, DateTime, String, Text, func
+from sqlalchemy import Date, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,6 +19,11 @@ class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    parent_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active", index=True)
@@ -43,12 +48,23 @@ class Document(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    parent = relationship(
+        "Document",
+        remote_side=[id],
+        back_populates="children",
+    )
+    children = relationship(
+        "Document",
+        back_populates="parent",
+        passive_deletes=True,
+    )
 
     def __init__(
         self,
         *,
         title: str,
         content: str,
+        parent_id: UUID | None,
         version: str | None,
         effective_from: date | None,
         metadata: dict[str, Any],
@@ -59,6 +75,7 @@ class Document(Base):
 
         self.title = title
         self.content = content
+        self.parent_id = parent_id
         self.status = DocumentStatus.ACTIVE
         self.version = version
         self.effective_from = effective_from
@@ -69,6 +86,7 @@ class Document(Base):
         *,
         title: str,
         content: str,
+        parent_id: UUID | None,
         version: str | None,
         effective_from: date | None,
         metadata: dict[str, Any],
@@ -76,6 +94,7 @@ class Document(Base):
         return Document(
             title=title,
             content=content,
+            parent_id=parent_id,
             version=version,
             effective_from=effective_from,
             metadata=metadata,

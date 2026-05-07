@@ -22,6 +22,7 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 def serialize_document(document: Document) -> DocumentResponse:
     return DocumentResponse(
         id=document.id,
+        parent_id=document.parent_id,
         title=document.title,
         content=document.content,
         status=document.status,
@@ -46,11 +47,15 @@ async def create_document(
         chunks = chunk_text(payload.content)
         embeddings = await embed_chunks(chunks)
 
+    if payload.parent_id is not None and await document_repository.get(payload.parent_id) is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parent document not found.")
+
     await document_repository.archive_active_by_title(payload.title)
 
     document = await document_repository.create(
         title=payload.title,
         content=payload.content,
+        parent_id=payload.parent_id,
         version=payload.version,
         effective_from=payload.effective_from,
         metadata=payload.metadata,
@@ -103,6 +108,18 @@ async def update_document(
     values = payload.model_dump(exclude_unset=True)
     if values.get("metadata") is None and "metadata" in values:
         values["metadata"] = {}
+    if values.get("parent_id") == document_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document cannot be its own parent.",
+        )
+    if values.get("parent_id") is not None and "parent_id" in values:
+        parent = await document_repository.get(values["parent_id"])
+        if parent is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Parent document not found.",
+            )
 
     content_changed = "content" in values
     updated_document = await document_repository.update(document, values)

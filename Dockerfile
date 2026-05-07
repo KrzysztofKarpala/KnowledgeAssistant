@@ -13,6 +13,8 @@ COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
 COPY main.py ./
+COPY scripts ./scripts
+COPY seed ./seed
 
 EXPOSE 8000
 

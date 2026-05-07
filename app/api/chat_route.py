@@ -44,12 +44,14 @@ async def retrieve(
         results=[
             RetrievedChunkResponse(
                 document_id=result.document_id,
+                parent_id=result.parent_id,
                 document_title=result.document_title,
                 document_version=result.document_version,
                 effective_from=result.effective_from,
                 chunk_id=result.chunk_id,
                 chunk_index=result.chunk_index,
                 similarity=result.similarity,
+                source_role=result.source_role,
                 content=result.content,
             )
             for result in results
@@ -86,19 +88,22 @@ async def chat(
     sources = [
         SourceReference(
             document_id=result.document_id,
+            parent_id=result.parent_id,
             document_title=result.document_title,
             document_version=result.document_version,
             effective_from=result.effective_from,
             chunk_id=result.chunk_id,
             chunk_index=result.chunk_index,
             similarity=result.similarity,
+            source_role=result.source_role,
         )
         for result in retrieved_chunks
     ]
 
     response = ChatResponse(
-        answer=answer,
+        answer=answer.answer,
         sources=sources,
+        cited_chunk_ids=answer.cited_chunk_ids,
         confidence=calculate_confidence([source.similarity for source in sources]),
     )
 

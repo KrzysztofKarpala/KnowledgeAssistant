@@ -7,6 +7,7 @@ def test_document_create_returns_active_document():
     document = Document.create(
         title="Domain Factory Test",
         content="Document content.",
+        parent_id=None,
         version="1.0",
         effective_from=None,
         metadata={"kind": "test"},
@@ -21,6 +22,7 @@ def test_document_constructor_is_private_for_application_code():
         Document(
             title="Direct Constructor Test",
             content="Document content.",
+            parent_id=None,
             version=None,
             effective_from=None,
             metadata={},

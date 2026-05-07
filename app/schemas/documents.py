@@ -12,6 +12,7 @@ class DocumentCreate(BaseModel):
 
     title: str = Field(min_length=1)
     content: str = Field(min_length=1)
+    parent_id: UUID | None = None
     version: str | None = None
     effective_from: date | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -22,6 +23,7 @@ class DocumentUpdate(BaseModel):
 
     title: str | None = Field(default=None, min_length=1)
     content: str | None = Field(default=None, min_length=1)
+    parent_id: UUID | None = None
     status: DocumentStatus | None = None
     version: str | None = None
     effective_from: date | None = None
@@ -38,6 +40,7 @@ class DocumentResponse(BaseModel):
     id: UUID
     title: str
     content: str
+    parent_id: UUID | None = None
     status: DocumentStatus
     version: str | None = None
     effective_from: date | None = None

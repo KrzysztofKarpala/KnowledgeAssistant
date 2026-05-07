@@ -1,0 +1,149 @@
+{
+  "dataset": "mes-products-v1",
+  "description": "Demo MES product, place, and equipment documentation for hierarchy and retrieval testing.",
+  "documents": [
+    {
+      "seed_key": "mes_product_hierarchy_policy",
+      "title": "MES Product and Place Hierarchy Policy",
+      "category": "policy",
+      "parent_seed_key": null,
+      "version": "1.0",
+      "effective_from": "2026-03-01",
+      "content": "This policy defines the hierarchy for MES production documentation. The MES Product and Place Hierarchy Policy is the higher-level document for product assembly overviews and place-specific setup instructions. Product documents describe what may be produced and define the approved production scope for a product. Place documents are subordinate to product documents and describe how an approved product is produced at a specific line, workstation, or cell. If a place document conflicts with its parent product document, the product document controls unless the place document explicitly states an approved exception. Equipment documents are standalone operating instructions and are not part of the product-place hierarchy unless a product or place document references them."
+    },
+    {
+      "seed_key": "product_ax100_v09_archived",
+      "title": "Product AX-100 - Assembly Overview",
+      "category": "product",
+      "status": "archived",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "0.9",
+      "effective_from": "2025-06-01",
+      "content": "Archived guidance for Product AX-100. AX-100 was previously allowed for pilot assembly on Workstation PACK-02 and Line SMT-04. Firmware version AX-100-FW-2.8 was acceptable in this archived version. This document is archived and must not be used for current production decisions."
+    },
+    {
+      "seed_key": "product_ax100",
+      "title": "Product AX-100 - Assembly Overview",
+      "category": "product",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "1.0",
+      "effective_from": "2026-01-01",
+      "content": "Product AX-100 is a compact motor controller assembled for standard industrial cabinets. AX-100 can be assembled on Line SMT-04 after the printed circuit board has passed incoming visual inspection. The product requires barcode traceability for the PCB serial number, firmware label, and final housing label. The standard quality check requires verifying connector orientation, firmware version AX-100-FW-3.2 or newer, and torque marks on the housing screws. For all AX-100 production, the first unit of each MES work order must be approved by a supervisor in MES. Senior operator self-release of the first unit is not allowed for AX-100. If the product is assembled outside an approved place, the batch must be placed on quality hold."
+    },
+    {
+      "seed_key": "product_bx200",
+      "title": "Product BX-200 - Assembly Overview",
+      "category": "product",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "1.0",
+      "effective_from": "2026-01-01",
+      "content": "Product BX-200 is a high-load power interface module. BX-200 can be produced in Cell CNC-01 for enclosure preparation and then finished at Workstation PACK-02. BX-200 requires a machined aluminum enclosure, thermal pad placement, and a final insulation resistance test. BX-200 must not be assembled on Line SMT-04 because the line lacks the required enclosure machining fixture. Any MES work order for BX-200 assigned to SMT-04 must be rejected and escalated to production planning."
+    },
+    {
+      "seed_key": "product_cx300",
+      "title": "Product CX-300 - Packaging Requirements",
+      "category": "product",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "1.0",
+      "effective_from": "2026-01-01",
+      "content": "Product CX-300 is a sensor gateway shipped with a protective foam insert and tamper-evident label. CX-300 packaging requires Workstation PACK-02 because the station has the calibrated label printer and the foam insert gauge. The operator must scan the product serial number, print the shipping label from MES, and record the packaging inspection result. Packaging without the tamper-evident label is not allowed."
+    },
+    {
+      "seed_key": "place_smt04_ax100_v09_archived",
+      "title": "Line SMT-04 - Product AX-100 Setup",
+      "category": "place",
+      "status": "archived",
+      "parent_seed_key": "product_ax100_v09_archived",
+      "version": "0.9",
+      "effective_from": "2025-06-15",
+      "content": "Archived setup guidance for Product AX-100 on Line SMT-04. Operators were previously allowed to bypass feeder verification after recording a manual note in MES. This instruction is archived. Current production must follow the active SMT-04 setup document and must not use this bypass rule."
+    },
+    {
+      "seed_key": "place_smt04_ax100",
+      "title": "Line SMT-04 - Product AX-100 Setup",
+      "category": "place",
+      "parent_seed_key": "product_ax100",
+      "version": "1.0",
+      "effective_from": "2026-02-01",
+      "content": "Line SMT-04 is approved for Product AX-100 assembly. Before starting an AX-100 work order, the operator must load recipe SMT04-AX100-R3, scan the PCB serial number, and verify that feeder positions F12 and F13 contain the correct connector reels. Local SMT-04 station guidance says a senior operator may self-release the first AX-100 unit after completing the local setup checklist. This local self-release statement conflicts with the parent AX-100 product document. SMT-04 operators must not bypass feeder verification. If feeder scanning fails, stop the work order and use Barcode Scanner BS-7 troubleshooting instructions before continuing."
+    },
+    {
+      "seed_key": "place_pack02_bx200",
+      "title": "Workstation PACK-02 - Product BX-200 Final Packing",
+      "category": "place",
+      "parent_seed_key": "product_bx200",
+      "version": "1.0",
+      "effective_from": "2026-02-01",
+      "content": "Workstation PACK-02 is approved for final packing of Product BX-200 after CNC enclosure preparation is complete. The operator must scan the BX-200 serial number, confirm insulation resistance test status is passed, and attach the heavy-load warning label. PACK-02 may not perform enclosure machining or thermal pad replacement. If the previous CNC operation is missing in MES genealogy, the BX-200 unit must be blocked and sent back to Cell CNC-01."
+    },
+    {
+      "seed_key": "place_pack02_cx300",
+      "title": "Workstation PACK-02 - Product CX-300 Packaging",
+      "category": "place",
+      "parent_seed_key": "product_cx300",
+      "version": "1.0",
+      "effective_from": "2026-02-01",
+      "content": "Workstation PACK-02 is the required packaging place for Product CX-300. The station contains the CX-300 foam insert gauge, calibrated label printer LP-22, and tamper-evident label dispenser. The operator must scan the product serial number, print the shipping label from MES, place the unit into the foam insert, and confirm the tamper-evident label number. If label printer LP-22 is unavailable, CX-300 packaging must wait; manual label writing is forbidden."
+    },
+    {
+      "seed_key": "place_cnc01_bx200",
+      "title": "Cell CNC-01 - Product BX-200 Enclosure Preparation",
+      "category": "place",
+      "parent_seed_key": "product_bx200",
+      "version": "1.0",
+      "effective_from": "2026-02-01",
+      "content": "Cell CNC-01 is approved for Product BX-200 enclosure preparation. The operator must load fixture CNC01-BX200-FX, scan the raw enclosure lot, and confirm machining program BX200-ENC-P2. After machining, MES requires dimensional inspection values for mounting hole diameter and surface flatness. BX-200 cannot proceed to Workstation PACK-02 until the CNC-01 operation is completed and accepted in MES."
+    },
+    {
+      "seed_key": "equipment_bs7_v08_archived",
+      "title": "Barcode Scanner BS-7 Troubleshooting",
+      "category": "equipment",
+      "status": "archived",
+      "parent_seed_key": null,
+      "version": "0.8",
+      "effective_from": "2025-05-01",
+      "content": "Archived BS-7 troubleshooting instruction. Operators were previously allowed to manually type product and material identifiers after two failed scans. This instruction is archived. Current production must not rely on this manual entry rule."
+    },
+    {
+      "seed_key": "equipment_bs7",
+      "title": "Barcode Scanner BS-7 Troubleshooting",
+      "category": "equipment",
+      "parent_seed_key": null,
+      "version": "1.0",
+      "effective_from": "2026-01-15",
+      "content": "Barcode Scanner BS-7 is used to scan product serial numbers, material reels, and packaging labels. If BS-7 fails to scan, clean the scanner window, verify the USB connection, and scan the test barcode on the station card. If the scanner still fails, restart the MES terminal service and repeat the test scan. Operators must not manually enter product or material identifiers unless a supervisor opens an approved MES exception."
+    },
+    {
+      "seed_key": "equipment_tw12",
+      "title": "Torque Wrench TW-12 Operating Instruction",
+      "category": "equipment",
+      "parent_seed_key": null,
+      "version": "1.0",
+      "effective_from": "2026-01-15",
+      "content": "Torque Wrench TW-12 is used for housing screws on small electronic assemblies. Before use, verify that the calibration date is valid and set the torque to 0.8 Nm for AX-100 housing screws. Apply torque until the wrench clicks once; do not double-click. Record the torque verification result in MES when the work instruction requires torque traceability. If calibration is expired, remove TW-12 from the station and notify maintenance."
+    },
+    {
+      "seed_key": "equipment_lp22",
+      "title": "Label Printer LP-22 Operating Instruction",
+      "category": "equipment",
+      "parent_seed_key": null,
+      "version": "1.0",
+      "effective_from": "2026-01-15",
+      "content": "Label Printer LP-22 prints shipping and tamper-evident labels at Workstation PACK-02. Operators must verify that the label template shown in MES matches the product code before printing. If LP-22 is unavailable, do not handwrite labels for CX-300 or BX-200. Create a maintenance ticket and keep the work order paused until printing is restored or quality engineering approves an alternative controlled label process."
+    }
+  ],
+  "questions": [
+    "What is the hierarchy between MES policy, product documents, and place documents?",
+    "If a place document conflicts with a product document, which one controls?",
+    "Where can Product AX-100 be assembled?",
+    "Can Product BX-200 be produced on Line SMT-04?",
+    "What setup is required for Product AX-100 on SMT-04?",
+    "Can a senior operator self-release the first AX-100 unit on SMT-04?",
+    "What should I do if barcode scanning fails on SMT-04?",
+    "Can an operator bypass feeder verification on SMT-04?",
+    "Does Product CX-300 require PACK-02?",
+    "How do I use Torque Wrench TW-12 for AX-100?",
+    "Can operators manually enter identifiers if BS-7 fails?",
+    "Can I handwrite a CX-300 label if LP-22 is unavailable?"
+  ]
+}
