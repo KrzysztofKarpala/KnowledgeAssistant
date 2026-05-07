@@ -1,0 +1,69 @@
+from collections.abc import Sequence
+from uuid import UUID
+
+from sqlalchemy import delete, desc, nulls_last, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.document import Document, DocumentStatus
+from app.models.document_chunk import DocumentChunk
+
+
+class ChunkRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def replace_for_document(
+        self,
+        *,
+        document_id: UUID,
+        chunks: Sequence[str],
+        embeddings: Sequence[list[float]],
+    ) -> int:
+        await self.session.execute(
+            delete(DocumentChunk).where(DocumentChunk.document_id == document_id)
+        )
+
+        for index, (content, embedding) in enumerate(zip(chunks, embeddings, strict=True)):
+            self.session.add(
+                DocumentChunk(
+                    document_id=document_id,
+                    chunk_index=index,
+                    content=content,
+                    embedding=embedding,
+                    metadata_={},
+                )
+            )
+
+        await self.session.commit()
+        return len(chunks)
+
+    async def count_for_document(self, document_id: UUID) -> int:
+        result = await self.session.scalars(
+            select(DocumentChunk.id).where(DocumentChunk.document_id == document_id)
+        )
+        return len(result.all())
+
+    async def search_similar(
+        self,
+        *,
+        embedding: list[float],
+        limit: int,
+        active_only: bool = True,
+    ) -> Sequence[tuple[DocumentChunk, Document, float]]:
+        distance = DocumentChunk.embedding.cosine_distance(embedding).label("distance")
+        statement = (
+            select(DocumentChunk, Document, distance)
+            .join(Document, Document.id == DocumentChunk.document_id)
+            .order_by(
+                distance.asc(),
+                nulls_last(desc(Document.effective_from)),
+                Document.created_at.desc(),
+            )
+            .limit(limit)
+        )
+
+        if active_only:
+            statement = statement.where(Document.status == DocumentStatus.ACTIVE)
+
+        result = await self.session.execute(statement)
+        return [(chunk, document, float(raw_distance)) for chunk, document, raw_distance in result.all()]
