@@ -1,5 +1,5 @@
-from app.services.llm import LLMClient, load_answer_system_prompt
-from app.services.retrieval import RetrievedChunk
+from app.services.llm_service import LLMClient, load_answer_system_prompt
+from app.services.retrieval_service import RetrievedChunk
 
 
 class AnswerService:

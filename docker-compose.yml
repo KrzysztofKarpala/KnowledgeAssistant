@@ -43,7 +43,6 @@ services:
 
 volumes:
   postgres_data:
-  ollama_data:
 
 networks:
   rag-network:

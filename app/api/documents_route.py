@@ -5,16 +5,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from app.api.dependencies import get_chunk_repository, get_document_repository
 from app.core.config import settings
 from app.models.document import Document
-from app.repositories.chunks import ChunkRepository
-from app.repositories.documents import DocumentRepository
+from app.repositories.chunk_repository import ChunkRepository
+from app.repositories.document_repository import DocumentRepository
 from app.schemas.documents import (
     DocumentCreate,
     DocumentCreateResponse,
     DocumentResponse,
     DocumentUpdate,
 )
-from app.services.chunking import chunk_text
-from app.services.embeddings import EmbeddingClient, EmbeddingServiceError
+from app.services.chunking_service import chunk_text
+from app.services.embedding_service import EmbeddingClient, EmbeddingServiceError
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -51,7 +51,6 @@ async def create_document(
     document = await document_repository.create(
         title=payload.title,
         content=payload.content,
-        status=payload.status,
         version=payload.version,
         effective_from=payload.effective_from,
         metadata=payload.metadata,

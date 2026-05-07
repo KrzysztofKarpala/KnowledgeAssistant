@@ -17,18 +17,16 @@ class DocumentRepository:
         *,
         title: str,
         content: str,
-        status: str,
         version: str | None,
         effective_from: Any,
         metadata: dict[str, Any],
     ) -> Document:
-        document = Document(
+        document = Document.create(
             title=title,
             content=content,
-            status=status,
             version=version,
             effective_from=effective_from,
-            metadata_=metadata,
+            metadata=metadata,
         )
         self.session.add(document)
         await self.session.commit()

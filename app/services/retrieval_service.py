@@ -5,8 +5,8 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.repositories.chunks import ChunkRepository
-from app.services.embeddings import EmbeddingClient
+from app.repositories.chunk_repository import ChunkRepository
+from app.services.embedding_service import EmbeddingClient
 
 
 @dataclass(frozen=True)

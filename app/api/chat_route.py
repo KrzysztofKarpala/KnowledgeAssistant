@@ -5,7 +5,7 @@ from app.api.dependencies import (
     get_query_log_repository,
     get_retrieval_service,
 )
-from app.repositories.query_logs import QueryLogRepository
+from app.repositories.query_log_repository import QueryLogRepository
 from app.schemas.chat import (
     ChatRequest,
     ChatResponse,
@@ -14,10 +14,10 @@ from app.schemas.chat import (
     RetrievedChunkResponse,
     SourceReference,
 )
-from app.services.answer import AnswerService
-from app.services.embeddings import EmbeddingServiceError
-from app.services.llm import LLMServiceError
-from app.services.retrieval import RetrievalService
+from app.services.answer_service import AnswerService
+from app.services.embedding_service import EmbeddingServiceError
+from app.services.llm_service import LLMServiceError
+from app.services.retrieval_service import RetrievalService
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 

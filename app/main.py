@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import chat, documents, health, queries
+from app.api import chat_route, documents_route, health_route, queries_route
 from app.core.config import settings
 
 
@@ -11,10 +11,10 @@ def create_app() -> FastAPI:
         description="Backend API for a local RAG knowledge assistant.",
     )
 
-    application.include_router(health.router)
-    application.include_router(documents.router)
-    application.include_router(chat.router)
-    application.include_router(queries.router)
+    application.include_router(health_route.router)
+    application.include_router(documents_route.router)
+    application.include_router(chat_route.router)
+    application.include_router(queries_route.router)
 
     return application
 

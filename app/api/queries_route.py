@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.api.dependencies import get_query_log_repository
 from app.models.query_log import QueryLog
-from app.repositories.query_logs import QueryLogRepository
+from app.repositories.query_log_repository import QueryLogRepository
 from app.schemas.queries import QueryLogResponse
 
 router = APIRouter(prefix="/queries", tags=["queries"])

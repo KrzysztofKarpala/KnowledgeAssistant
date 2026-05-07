@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -9,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
-class DocumentStatus:
+class DocumentStatus(StrEnum):
     ACTIVE = "active"
     ARCHIVED = "archived"
 
@@ -42,6 +43,44 @@ class Document(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+
+    def __init__(
+        self,
+        *,
+        title: str,
+        content: str,
+        version: str | None,
+        effective_from: date | None,
+        metadata: dict[str, Any],
+        _allow_direct_creation: bool = False,
+    ) -> None:
+        if not _allow_direct_creation:
+            raise TypeError("Use Document.Create() to create a document.")
+
+        self.title = title
+        self.content = content
+        self.status = DocumentStatus.ACTIVE
+        self.version = version
+        self.effective_from = effective_from
+        self.metadata_ = metadata
+
+    @staticmethod
+    def create(
+        *,
+        title: str,
+        content: str,
+        version: str | None,
+        effective_from: date | None,
+        metadata: dict[str, Any],
+    ) -> "Document":
+        return Document(
+            title=title,
+            content=content,
+            version=version,
+            effective_from=effective_from,
+            metadata=metadata,
+            _allow_direct_creation=True,
+        )
 
     def move_to_archived(self) -> None:
         self.status = DocumentStatus.ARCHIVED

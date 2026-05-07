@@ -2,7 +2,8 @@ from app.core.config import settings
 
 
 class FakeEmbeddingClient:
-    async def embed_many(self, texts: list[str]) -> list[list[float]]:
+    @staticmethod
+    async def embed_many(texts: list[str]) -> list[list[float]]:
         return [[0.01] * settings.embedding_dimension for _ in texts]
 
 
@@ -12,7 +13,6 @@ async def test_document_crud(api_client):
         json={
             "title": "Document CRUD Test",
             "content": "Plain document content.",
-            "status": "active",
             "version": "1.0",
             "metadata": {"kind": "test"},
         },
@@ -48,7 +48,6 @@ async def test_create_document_archives_existing_active_document_with_same_title
         json={
             "title": title,
             "content": "First version.",
-            "status": "active",
             "version": "1.0",
         },
     )
@@ -57,7 +56,6 @@ async def test_create_document_archives_existing_active_document_with_same_title
         json={
             "title": title,
             "content": "Second version.",
-            "status": "active",
             "version": "2.0",
         },
     )
@@ -73,19 +71,49 @@ async def test_create_document_archives_existing_active_document_with_same_title
 
 
 async def test_create_document_with_index_stores_chunks(api_client, monkeypatch):
-    from app.api import documents as documents_api
+    from app.api import documents_route
 
-    monkeypatch.setattr(documents_api, "EmbeddingClient", FakeEmbeddingClient)
+    monkeypatch.setattr(documents_route, "EmbeddingClient", FakeEmbeddingClient)
 
     response = await api_client.post(
         "/documents",
         json={
             "title": "Indexed Document Test",
             "content": "This document should be split and indexed.",
-            "status": "active",
             "version": "1.0",
         },
     )
 
     assert response.status_code == 201
     assert response.json()["chunks_created"] == 1
+
+
+async def test_create_document_rejects_status_field(api_client):
+    response = await api_client.post(
+        "/documents?index=false",
+        json={
+            "title": "Create Status Rejected Test",
+            "content": "New documents are always active.",
+            "status": "archived",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+async def test_update_document_rejects_invalid_status(api_client):
+    create_response = await api_client.post(
+        "/documents?index=false",
+        json={
+            "title": "Invalid Status Test",
+            "content": "Document content.",
+        },
+    )
+    assert create_response.status_code == 201
+
+    update_response = await api_client.patch(
+        f"/documents/{create_response.json()['id']}",
+        json={"status": "actve"},
+    )
+
+    assert update_response.status_code == 422

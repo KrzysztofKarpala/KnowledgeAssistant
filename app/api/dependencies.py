@@ -2,11 +2,11 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.repositories.chunks import ChunkRepository
-from app.repositories.documents import DocumentRepository
-from app.repositories.query_logs import QueryLogRepository
-from app.services.answer import AnswerService
-from app.services.retrieval import RetrievalService
+from app.repositories.chunk_repository import ChunkRepository
+from app.repositories.document_repository import DocumentRepository
+from app.repositories.query_log_repository import QueryLogRepository
+from app.services.answer_service import AnswerService
+from app.services.retrieval_service import RetrievalService
 
 
 async def get_document_repository(
