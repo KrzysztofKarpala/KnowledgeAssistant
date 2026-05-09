@@ -5,7 +5,7 @@ from app.services.answer_service import INSUFFICIENT_INFORMATION_ANSWER, AnswerS
 from app.services.retrieval_service import RetrievedChunk
 
 
-class FakeLLMClient:
+class LLMClientMock:
     def __init__(self, response: str) -> None:
         self.response = response
 
@@ -30,7 +30,7 @@ def make_source() -> RetrievedChunk:
 async def test_answer_accepts_valid_structured_response_with_citation():
     source = make_source()
     service = AnswerService(
-        llm_client=FakeLLMClient(
+        llm_client=LLMClientMock(
             response=(
                 '{"answer":"Use the blue hammer.",'
                 f'"cited_chunk_ids":["{source.chunk_id}"],'
@@ -46,7 +46,7 @@ async def test_answer_accepts_valid_structured_response_with_citation():
 
 
 async def test_answer_withholds_invalid_json_response():
-    service = AnswerService(llm_client=FakeLLMClient(response="Use the blue hammer."))
+    service = AnswerService(llm_client=LLMClientMock(response="Use the blue hammer."))
 
     answer = await service.answer(question="Which hammer?", sources=[make_source()])
 
@@ -56,7 +56,7 @@ async def test_answer_withholds_invalid_json_response():
 
 async def test_answer_withholds_uncited_response():
     service = AnswerService(
-        llm_client=FakeLLMClient(
+        llm_client=LLMClientMock(
             response='{"answer":"Use the blue hammer.","cited_chunk_ids":[],"insufficient_evidence":false}'
         )
     )
@@ -70,7 +70,7 @@ async def test_answer_withholds_uncited_response():
 async def test_answer_normalizes_insufficient_evidence():
     source = make_source()
     service = AnswerService(
-        llm_client=FakeLLMClient(
+        llm_client=LLMClientMock(
             response=(
                 '{"answer":"I do not know.",'
                 f'"cited_chunk_ids":["{source.chunk_id}"],'

@@ -1,8 +1,7 @@
 from pathlib import Path
 import re
-from typing import Any
 
-import httpx
+from openai import APIError, APITimeoutError, AsyncOpenAI, OpenAIError
 
 from app.core.config import settings
 
@@ -15,45 +14,34 @@ class LLMClient:
     def __init__(
         self,
         *,
-        base_url: str = settings.llm_base_url,
+        base_url: str = settings.openai_base_url,
+        api_key: str = settings.openai_api_key,
         model: str = settings.llm_model,
         timeout_seconds: float = 120.0,
+        client: AsyncOpenAI | None = None,
     ) -> None:
-        self.base_url = base_url.rstrip("/")
         self.model = model
-        self.timeout_seconds = timeout_seconds
+        self.client = client or AsyncOpenAI(
+            base_url=base_url.rstrip("/"),
+            api_key=api_key,
+            timeout=timeout_seconds,
+        )
 
     async def generate(self, *, system_prompt: str, user_prompt: str) -> str:
         try:
-            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
-                response = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    json={
-                        "model": self.model,
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt},
-                        ],
-                        "temperature": 0.1,
-                        "stream": False,
-                    },
-                )
-                response.raise_for_status()
-                return self._parse_response(response.json())
-        except httpx.HTTPError as exc:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.1,
+                stream=False,
+            )
+            content = response.choices[0].message.content
+        except (APIError, APITimeoutError, OpenAIError, IndexError) as exc:
             raise LLMServiceError(f"LLM service request failed: {exc}") from exc
 
-    @staticmethod
-    def _parse_response(payload: dict[str, Any]) -> str:
-        choices = payload.get("choices")
-        if not isinstance(choices, list) or not choices:
-            raise LLMServiceError("LLM service returned an invalid response.")
-
-        message = choices[0].get("message")
-        if not isinstance(message, dict):
-            raise LLMServiceError("LLM service returned an invalid message.")
-
-        content = message.get("content")
         if not isinstance(content, str) or not content.strip():
             raise LLMServiceError("LLM service returned an empty answer.")
 

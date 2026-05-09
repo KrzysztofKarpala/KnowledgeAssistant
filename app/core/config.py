@@ -13,13 +13,9 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://postgres:postgres@postgres:5432/knowledge_assistant",
         alias="DATABASE_URL",
     )
-    lm_studio_url: str = Field(default="http://127.0.0.1:1234", alias="LM_STUDIO_URL")
-    llm_base_url: str = Field(default="http://127.0.0.1:1234/v1", alias="LLM_BASE_URL")
+    openai_base_url: str = Field(default="http://127.0.0.1:1234/v1", alias="OPENAI_BASE_URL")
+    openai_api_key: str = Field(default="lm-studio", alias="OPENAI_API_KEY")
     llm_model: str = Field(default="google/gemma-4-e4b", alias="LLM_MODEL")
-    embedding_base_url: str = Field(
-        default="http://127.0.0.1:1234/v1",
-        alias="EMBEDDING_BASE_URL",
-    )
     embedding_model: str = Field(
         default="text-embedding-embeddinggemma-300m-qat",
         alias="EMBEDDING_MODEL",

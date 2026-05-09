@@ -1,10 +1,10 @@
 async def test_retrieve_returns_indexed_document(api_client, monkeypatch):
     from app.api import documents_route
     from app.services import retrieval_service
-    from tests.test_documents_api import FakeEmbeddingClient
+    from tests.test_documents_api import EmbeddingClientMock
 
-    monkeypatch.setattr(documents_route, "EmbeddingClient", FakeEmbeddingClient)
-    monkeypatch.setattr(retrieval_service, "EmbeddingClient", FakeEmbeddingClient)
+    monkeypatch.setattr(documents_route, "EmbeddingClient", EmbeddingClientMock)
+    monkeypatch.setattr(retrieval_service, "EmbeddingClient", EmbeddingClientMock)
 
     created_response = await api_client.post(
         "/documents",
@@ -34,10 +34,10 @@ async def test_retrieve_returns_indexed_document(api_client, monkeypatch):
 async def test_retrieve_includes_parent_document_for_child_match(api_client, monkeypatch):
     from app.api import documents_route
     from app.services import retrieval_service
-    from tests.test_documents_api import FakeEmbeddingClient
+    from tests.test_documents_api import EmbeddingClientMock
 
-    monkeypatch.setattr(documents_route, "EmbeddingClient", FakeEmbeddingClient)
-    monkeypatch.setattr(retrieval_service, "EmbeddingClient", FakeEmbeddingClient)
+    monkeypatch.setattr(documents_route, "EmbeddingClient", EmbeddingClientMock)
+    monkeypatch.setattr(retrieval_service, "EmbeddingClient", EmbeddingClientMock)
 
     parent_response = await api_client.post(
         "/documents",

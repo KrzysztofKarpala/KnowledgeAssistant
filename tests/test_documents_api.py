@@ -1,7 +1,7 @@
 from app.core.config import settings
 
 
-class FakeEmbeddingClient:
+class EmbeddingClientMock:
     @staticmethod
     async def embed_many(texts: list[str]) -> list[list[float]]:
         return [[0.01] * settings.embedding_dimension for _ in texts]
@@ -73,7 +73,7 @@ async def test_create_document_archives_existing_active_document_with_same_title
 async def test_create_document_with_index_stores_chunks(api_client, monkeypatch):
     from app.api import documents_route
 
-    monkeypatch.setattr(documents_route, "EmbeddingClient", FakeEmbeddingClient)
+    monkeypatch.setattr(documents_route, "EmbeddingClient", EmbeddingClientMock)
 
     response = await api_client.post(
         "/documents",
