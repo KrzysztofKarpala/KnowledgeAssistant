@@ -91,7 +91,8 @@ class EmbeddingClient:
 
         return embeddings
 
-    def _parse_embed_response(self, payload: dict[str, Any]) -> list[list[float]]:
+    @staticmethod
+    def _parse_embed_response(payload: dict[str, Any]) -> list[list[float]]:
         embeddings = payload.get("embeddings")
         if not isinstance(embeddings, list):
             raise EmbeddingServiceError("Embedding service returned an invalid response.")

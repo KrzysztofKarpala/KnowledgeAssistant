@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,6 +13,10 @@ from app.core.database import Base
 class DocumentStatus(StrEnum):
     ACTIVE = "active"
     ARCHIVED = "archived"
+
+
+def enum_values(enum: type[StrEnum]) -> list[str]:
+    return [item.value for item in enum]
 
 
 class Document(Base):
@@ -26,7 +30,12 @@ class Document(Base):
     )
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active", index=True)
+    status: Mapped[DocumentStatus] = mapped_column(
+        Enum(DocumentStatus, values_callable=enum_values),
+        nullable=False,
+        default=DocumentStatus.ACTIVE,
+        index=True,
+    )
     version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     effective_from: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)

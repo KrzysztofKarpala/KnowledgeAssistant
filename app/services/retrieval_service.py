@@ -60,7 +60,7 @@ class RetrievalService:
                 chunk_id=chunk.id,
                 chunk_index=chunk.chunk_index,
                 content=chunk.content,
-                similarity=max(0.0, min(1.0, 1.0 - distance)),
+                similarity=self._distance_to_similarity(distance),
             )
             for chunk, document, distance in rows
         ]
@@ -76,8 +76,8 @@ class RetrievalService:
             if chunk.similarity >= settings.retrieval_min_similarity
         ]
 
+    @staticmethod
     async def _include_parent_chunks(
-        self,
         *,
         chunk_repository: ChunkRepository,
         chunks: list[RetrievedChunk],
@@ -113,10 +113,18 @@ class RetrievalService:
                     chunk_id=parent_chunk.id,
                     chunk_index=parent_chunk.chunk_index,
                     content=parent_chunk.content,
-                    similarity=max(0.0, min(1.0, 1.0 - parent_distance)),
+                    similarity=RetrievalService._distance_to_similarity(parent_distance),
                     source_role="hierarchy_parent",
                 )
             )
             seen_document_ids.add(parent_document.id)
 
         return expanded_chunks
+
+    @staticmethod
+    def _distance_to_similarity(distance: float) -> float:
+        return RetrievalService._clip(1.0 - distance, min_value=0.0, max_value=1.0)
+
+    @staticmethod
+    def _clip(value: float, *, min_value: float, max_value: float) -> float:
+        return max(min_value, min(max_value, value))

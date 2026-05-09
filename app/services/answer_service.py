@@ -51,7 +51,8 @@ class AnswerService:
         )
         return self._validate_answer(raw_answer=raw_answer, sources=sources)
 
-    def _build_context(self, sources: list[RetrievedChunk]) -> str:
+    @staticmethod
+    def _build_context(sources: list[RetrievedChunk]) -> str:
         blocks: list[str] = []
         for source in sources:
             blocks.append(
@@ -73,7 +74,8 @@ class AnswerService:
 
         return "\n\n---\n\n".join(blocks)
 
-    def _validate_answer(self, *, raw_answer: str, sources: list[RetrievedChunk]) -> AnswerResult:
+    @staticmethod
+    def _validate_answer(*, raw_answer: str, sources: list[RetrievedChunk]) -> AnswerResult:
         try:
             payload = json.loads(raw_answer)
             structured_answer = StructuredAnswer.model_validate(payload)

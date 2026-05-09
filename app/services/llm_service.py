@@ -43,7 +43,8 @@ class LLMClient:
         except httpx.HTTPError as exc:
             raise LLMServiceError(f"LLM service request failed: {exc}") from exc
 
-    def _parse_response(self, payload: dict[str, Any]) -> str:
+    @staticmethod
+    def _parse_response(payload: dict[str, Any]) -> str:
         choices = payload.get("choices")
         if not isinstance(choices, list) or not choices:
             raise LLMServiceError("LLM service returned an invalid response.")
