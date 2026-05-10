@@ -3,6 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.repositories.chunk_repository import ChunkRepository
+from app.repositories.conversation_repository import (
+    ConversationMessageRepository,
+    ConversationRepository,
+)
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.query_log_repository import QueryLogRepository
 from app.services.answer_service import AnswerService
@@ -25,6 +29,18 @@ async def get_query_log_repository(
     session: AsyncSession = Depends(get_async_session),
 ) -> QueryLogRepository:
     return QueryLogRepository(session)
+
+
+async def get_conversation_repository(
+    session: AsyncSession = Depends(get_async_session),
+) -> ConversationRepository:
+    return ConversationRepository(session)
+
+
+async def get_conversation_message_repository(
+    session: AsyncSession = Depends(get_async_session),
+) -> ConversationMessageRepository:
+    return ConversationMessageRepository(session)
 
 
 async def get_retrieval_service(

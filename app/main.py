@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import chat_route, documents_route, health_route, queries_route
+from app.api import chat_route, conversations_route, documents_route, health_route, queries_route
 from app.core.config import settings
 
 
@@ -14,6 +14,7 @@ def create_app() -> FastAPI:
     application.include_router(health_route.router)
     application.include_router(documents_route.router)
     application.include_router(chat_route.router)
+    application.include_router(conversations_route.router)
     application.include_router(queries_route.router)
 
     return application
