@@ -15,7 +15,7 @@ class LLMClientMock:
         self.user_prompt: str | None = None
         self.user_prompts: list[str] = []
 
-    async def generate(self, *, user_prompt: str) -> str:
+    async def generate(self, *, system_prompt: str, user_prompt: str) -> str:
         self.user_prompt = user_prompt
         self.user_prompts.append(user_prompt)
         return self.responses.pop(0)

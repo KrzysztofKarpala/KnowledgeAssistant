@@ -82,4 +82,12 @@ def sanitize_llm_answer(content: str) -> str:
     cleaned = re.sub(r"<\|channel\>.*?(?=<channel\|>|$)", "", cleaned, flags=re.DOTALL)
     cleaned = cleaned.replace("<channel|>", "")
     cleaned = cleaned.replace("<|channel>", "")
-    return cleaned.strip()
+    return _strip_markdown_code_fence(cleaned.strip())
+
+
+def _strip_markdown_code_fence(content: str) -> str:
+    match = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", content, flags=re.DOTALL | re.IGNORECASE)
+    if match is None:
+        return content
+
+    return match.group(1).strip()

@@ -49,6 +49,23 @@ async def test_llm_client_generates_sanitized_answer():
     assert openai_client.chat.completions.kwargs["response_format"] == {"type": "json_object"}
 
 
+async def test_llm_client_strips_channel_thought_and_json_code_fence():
+    content = (
+        '<|channel>thought\nignored reasoning<channel|>```json\n'
+        '{"answer":"No product found.","cited_chunk_ids":[],"insufficient_evidence":true,'
+        '"uses_conversation_history":false}\n'
+        "```"
+    )
+    client = LLMClient(client=llm_client_mock(content))
+
+    answer = await client.generate(system_prompt="system", user_prompt="user")
+
+    assert answer == (
+        '{"answer":"No product found.","cited_chunk_ids":[],"insufficient_evidence":true,'
+        '"uses_conversation_history":false}'
+    )
+
+
 async def test_llm_client_rejects_empty_answer():
     client = LLMClient(client=llm_client_mock(" "))
 
