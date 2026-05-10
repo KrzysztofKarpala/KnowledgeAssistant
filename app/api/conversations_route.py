@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.chat_route import calculate_confidence
+from app.api.chat_route import build_source_references, calculate_confidence
 from app.api.dependencies import (
     get_answer_service,
     get_conversation_message_repository,
@@ -14,7 +14,6 @@ from app.repositories.conversation_repository import (
     ConversationMessageRepository,
     ConversationRepository,
 )
-from app.schemas.chat import SourceReference
 from app.schemas.conversations import (
     ConversationChatResponse,
     ConversationCreate,
@@ -46,10 +45,18 @@ def serialize_message(message: ConversationMessage) -> ConversationMessageRespon
         conversation_id=message.conversation_id,
         role=message.role,
         content=message.content,
-        cited_chunk_ids=message.cited_chunk_ids,
+        cited_chunk_ids=[UUID(chunk_id) for chunk_id in message.cited_chunk_ids],
         metadata=message.metadata_,
         created_at=message.created_at,
     )
+
+
+def build_conversation_history(messages: list[ConversationMessage]) -> list[ConversationTurn]:
+    return [
+        ConversationTurn(role=message.role.value, content=message.content)
+        for message in messages
+        if message.role in {ConversationMessageRole.USER, ConversationMessageRole.ASSISTANT}
+    ]
 
 
 @router.post("", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
@@ -120,11 +127,7 @@ async def create_conversation_message(
         conversation_id=conversation_id,
         limit=10,
     )
-    history = [
-        ConversationTurn(role=message.role.value, content=message.content)
-        for message in recent_messages
-        if message.role in {ConversationMessageRole.USER, ConversationMessageRole.ASSISTANT}
-    ]
+    history = build_conversation_history(list(recent_messages))
 
     user_message = await message_repository.create(
         conversation_id=conversation_id,
@@ -150,20 +153,8 @@ async def create_conversation_message(
             detail=str(exc),
         ) from exc
 
-    sources = [
-        SourceReference(
-            document_id=result.document_id,
-            parent_id=result.parent_id,
-            document_title=result.document_title,
-            document_version=result.document_version,
-            effective_from=result.effective_from,
-            chunk_id=result.chunk_id,
-            chunk_index=result.chunk_index,
-            similarity=result.similarity,
-            source_role=result.source_role,
-        )
-        for result in retrieved_chunks
-    ]
+    sources = build_source_references(retrieved_chunks)
+    confidence = calculate_confidence([source.similarity for source in sources])
     assistant_message = await message_repository.create(
         conversation_id=conversation_id,
         role=ConversationMessageRole.ASSISTANT,
@@ -171,7 +162,7 @@ async def create_conversation_message(
         cited_chunk_ids=[str(chunk_id) for chunk_id in answer.cited_chunk_ids],
         metadata={
             "sources": [source.model_dump(mode="json") for source in sources],
-            "confidence": calculate_confidence([source.similarity for source in sources]),
+            "confidence": confidence,
         },
     )
 
@@ -182,5 +173,5 @@ async def create_conversation_message(
         answer=answer.answer,
         sources=sources,
         cited_chunk_ids=answer.cited_chunk_ids,
-        confidence=calculate_confidence([source.similarity for source in sources]),
+        confidence=confidence,
     )

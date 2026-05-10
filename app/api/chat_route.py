@@ -17,7 +17,7 @@ from app.schemas.chat import (
 from app.services.answer_service import AnswerService
 from app.services.embedding_service import EmbeddingServiceError
 from app.services.llm_service import LLMServiceError
-from app.services.retrieval_service import RetrievalService
+from app.services.retrieval_service import RetrievedChunk, RetrievalService
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -85,20 +85,7 @@ async def chat(
             detail=str(exc),
         ) from exc
 
-    sources = [
-        SourceReference(
-            document_id=result.document_id,
-            parent_id=result.parent_id,
-            document_title=result.document_title,
-            document_version=result.document_version,
-            effective_from=result.effective_from,
-            chunk_id=result.chunk_id,
-            chunk_index=result.chunk_index,
-            similarity=result.similarity,
-            source_role=result.source_role,
-        )
-        for result in retrieved_chunks
-    ]
+    sources = build_source_references(retrieved_chunks)
 
     response = ChatResponse(
         answer=answer.answer,
@@ -114,6 +101,23 @@ async def chat(
     )
 
     return response
+
+
+def build_source_references(retrieved_chunks: list[RetrievedChunk]) -> list[SourceReference]:
+    return [
+        SourceReference(
+            document_id=result.document_id,
+            parent_id=result.parent_id,
+            document_title=result.document_title,
+            document_version=result.document_version,
+            effective_from=result.effective_from,
+            chunk_id=result.chunk_id,
+            chunk_index=result.chunk_index,
+            similarity=result.similarity,
+            source_role=result.source_role,
+        )
+        for result in retrieved_chunks
+    ]
 
 
 def calculate_confidence(similarities: list[float]) -> str:

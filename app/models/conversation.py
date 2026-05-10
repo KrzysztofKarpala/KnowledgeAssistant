@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.models.document import enum_values
+from app.models.enums import enum_values
 
 
 class ConversationStatus(StrEnum):

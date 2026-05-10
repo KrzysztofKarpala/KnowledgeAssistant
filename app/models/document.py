@@ -8,15 +8,12 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.models.enums import enum_values
 
 
 class DocumentStatus(StrEnum):
     ACTIVE = "active"
     ARCHIVED = "archived"
-
-
-def enum_values(enum: type[StrEnum]) -> list[str]:
-    return [item.value for item in enum]
 
 
 class Document(Base):
