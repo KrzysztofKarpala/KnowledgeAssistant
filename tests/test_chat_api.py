@@ -79,3 +79,46 @@ async def test_retrieve_includes_parent_document_for_child_match(api_client, mon
     assert "Child Retrieval Test" in titles
     assert "Parent Retrieval Test" in titles
     assert source_roles["Parent Retrieval Test"] == "hierarchy_parent"
+
+
+async def test_retrieve_uses_keyword_match_to_rank_exact_terms(api_client, monkeypatch):
+    from app.api import documents_route
+    from app.services import retrieval_service
+    from tests.test_documents_api import EmbeddingClientMock
+
+    monkeypatch.setattr(documents_route, "EmbeddingClient", EmbeddingClientMock)
+    monkeypatch.setattr(retrieval_service, "EmbeddingClient", EmbeddingClientMock)
+
+    generic_response = await api_client.post(
+        "/documents",
+        json={
+            "title": "Generic Calibration Procedure",
+            "content": "General calibration procedure for ordinary tools.",
+            "version": "1.0",
+        },
+    )
+    exact_response = await api_client.post(
+        "/documents",
+        json={
+            "title": "Tungsten Gauge Procedure",
+            "content": "The tungsten gauge requires supervisor approval before release.",
+            "version": "1.0",
+        },
+    )
+    assert generic_response.status_code == 201
+    assert exact_response.status_code == 201
+
+    retrieve_response = await api_client.post(
+        "/chat/retrieve",
+        json={
+            "question": "What approval is required for the tungsten gauge?",
+            "limit": 1,
+            "active_only": True,
+        },
+    )
+
+    assert retrieve_response.status_code == 200
+    results = retrieve_response.json()["results"]
+    assert len(results) == 1
+    assert results[0]["document_title"] == "Tungsten Gauge Procedure"
+    assert results[0]["source_role"] == "hybrid_match"

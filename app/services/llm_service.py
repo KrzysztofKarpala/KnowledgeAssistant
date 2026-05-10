@@ -1,7 +1,6 @@
-from pathlib import Path
 import re
 
-from openai import APIError, APITimeoutError, AsyncOpenAI, OpenAIError
+from openai import APIError, APITimeoutError, AsyncOpenAI, BadRequestError, OpenAIError
 
 from app.core.config import settings
 
@@ -29,16 +28,22 @@ class LLMClient:
 
     async def generate(self, *, system_prompt: str, user_prompt: str) -> str:
         try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.1,
-                stream=False,
+            response = await self._create_completion(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                use_json_mode=True,
             )
             content = response.choices[0].message.content
+        except BadRequestError:
+            try:
+                response = await self._create_completion(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    use_json_mode=False,
+                )
+                content = response.choices[0].message.content
+            except (APIError, APITimeoutError, OpenAIError, IndexError) as exc:
+                raise LLMServiceError(f"LLM service request failed: {exc}") from exc
         except (APIError, APITimeoutError, OpenAIError, IndexError) as exc:
             raise LLMServiceError(f"LLM service request failed: {exc}") from exc
 
@@ -47,10 +52,26 @@ class LLMClient:
 
         return sanitize_llm_answer(content)
 
+    async def _create_completion(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        use_json_mode: bool,
+    ):
+        kwargs = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": 0.1,
+            "stream": False,
+        }
+        if use_json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
 
-def load_answer_system_prompt() -> str:
-    prompt_path = Path(__file__).resolve().parents[1] / "prompts" / "answer_system_prompt.txt"
-    return prompt_path.read_text(encoding="utf-8")
+        return await self.client.chat.completions.create(**kwargs)
 
 
 def sanitize_llm_answer(content: str) -> str:

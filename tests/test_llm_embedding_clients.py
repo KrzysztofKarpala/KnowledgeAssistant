@@ -9,8 +9,10 @@ from app.services.llm_service import LLMClient, LLMServiceError
 class ChatCompletionsMock:
     def __init__(self, content: str | None) -> None:
         self.content = content
+        self.kwargs = None
 
     async def create(self, **kwargs):
+        self.kwargs = kwargs
         return SimpleNamespace(
             choices=[
                 SimpleNamespace(
@@ -29,7 +31,8 @@ class EmbeddingsMock:
 
 
 def llm_client_mock(content: str | None):
-    return SimpleNamespace(chat=SimpleNamespace(completions=ChatCompletionsMock(content)))
+    completions = ChatCompletionsMock(content)
+    return SimpleNamespace(chat=SimpleNamespace(completions=completions))
 
 
 def embedding_client_mock(data):
@@ -37,11 +40,13 @@ def embedding_client_mock(data):
 
 
 async def test_llm_client_generates_sanitized_answer():
-    client = LLMClient(client=llm_client_mock("  answer <|channel>analysis  "))
+    openai_client = llm_client_mock("  answer <|channel>analysis  ")
+    client = LLMClient(client=openai_client)
 
     answer = await client.generate(system_prompt="system", user_prompt="user")
 
     assert answer == "answer"
+    assert openai_client.chat.completions.kwargs["response_format"] == {"type": "json_object"}
 
 
 async def test_llm_client_rejects_empty_answer():

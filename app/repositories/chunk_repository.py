@@ -1,12 +1,11 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, desc, nulls_last, select
+from sqlalchemy import delete, desc, func, nulls_last, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import Document, DocumentStatus
 from app.models.document_chunk import DocumentChunk
-
 
 class ChunkRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -94,3 +93,33 @@ class ChunkRepository:
 
         result = await self.session.execute(statement)
         return [(chunk, document, float(raw_distance)) for chunk, document, raw_distance in result.all()]
+
+    async def search_keyword(
+        self,
+        *,
+        query: str,
+        limit: int,
+        active_only: bool = True,
+        search_config: str = "english",
+    ) -> Sequence[tuple[DocumentChunk, Document, float]]:
+        search_query = func.websearch_to_tsquery(search_config, query)
+        search_vector = func.to_tsvector(search_config, DocumentChunk.content)
+        rank = func.ts_rank_cd(search_vector, search_query).label("rank")
+        statement = (
+            select(DocumentChunk, Document, rank)
+            .join(Document, Document.id == DocumentChunk.document_id)
+            .where(search_vector.op("@@")(search_query))
+            .order_by(
+                rank.desc(),
+                nulls_last(desc(Document.effective_from)),
+                Document.created_at.desc(),
+                DocumentChunk.chunk_index.asc(),
+            )
+            .limit(limit)
+        )
+
+        if active_only:
+            statement = statement.where(Document.status == DocumentStatus.ACTIVE)
+
+        result = await self.session.execute(statement)
+        return [(chunk, document, float(raw_rank)) for chunk, document, raw_rank in result.all()]
