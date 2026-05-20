@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass
 from uuid import UUID
 from pydantic import BaseModel, Field, ValidationError
@@ -8,6 +9,10 @@ from app.services.retrieval_service import RetrievedChunk
 
 INSUFFICIENT_INFORMATION_ANSWER = (
     "The available documentation does not contain enough information to answer this question."
+)
+UUID_PATTERN = re.compile(
+    r"\s*\[?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\]?",
+    flags=re.IGNORECASE,
 )
 
 @dataclass(frozen=True)
@@ -205,7 +210,10 @@ class AnswerService:
             return AnswerResult(answer=INSUFFICIENT_INFORMATION_ANSWER, cited_chunk_ids=cited_chunk_ids)
 
         if structured_answer.uses_conversation_history and has_conversation_history:
-            return AnswerResult(answer=structured_answer.answer, cited_chunk_ids=cited_chunk_ids)
+            return AnswerResult(
+                answer=clean_answer_text(structured_answer.answer),
+                cited_chunk_ids=cited_chunk_ids,
+            )
 
         if not cited_chunk_ids:
             return AnswerResult(
@@ -216,4 +224,15 @@ class AnswerService:
                 cited_chunk_ids=[],
             )
 
-        return AnswerResult(answer=structured_answer.answer, cited_chunk_ids=cited_chunk_ids)
+        return AnswerResult(
+            answer=clean_answer_text(structured_answer.answer),
+            cited_chunk_ids=cited_chunk_ids,
+        )
+
+
+def clean_answer_text(answer: str) -> str:
+    cleaned = UUID_PATTERN.sub("", answer)
+    cleaned = re.sub(r"\s+([.,;:!?])", r"\1", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()

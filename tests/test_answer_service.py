@@ -12,10 +12,12 @@ from app.services.retrieval_service import RetrievedChunk
 class LLMClientMock:
     def __init__(self, response: str | list[str]) -> None:
         self.responses = response if isinstance(response, list) else [response]
+        self.system_prompt: str | None = None
         self.user_prompt: str | None = None
         self.user_prompts: list[str] = []
 
     async def generate(self, *, system_prompt: str, user_prompt: str) -> str:
+        self.system_prompt = system_prompt
         self.user_prompt = user_prompt
         self.user_prompts.append(user_prompt)
         return self.responses.pop(0)
@@ -51,6 +53,42 @@ async def test_answer_accepts_valid_structured_response_with_citation():
 
     assert answer.answer == "Use the blue hammer."
     assert answer.cited_chunk_ids == [source.chunk_id]
+
+
+async def test_answer_removes_inline_chunk_ids_from_answer_text():
+    source = make_source()
+    service = AnswerService(
+        llm_client=LLMClientMock(
+            response=(
+                f'{{"answer":"Use the blue hammer [{source.chunk_id}].",'
+                f'"cited_chunk_ids":["{source.chunk_id}"],'
+                '"insufficient_evidence":false}'
+            )
+        )
+    )
+
+    answer = await service.answer(question="Which hammer?", sources=[source])
+
+    assert answer.answer == "Use the blue hammer."
+    assert answer.cited_chunk_ids == [source.chunk_id]
+
+
+async def test_answer_prompt_keeps_citations_out_of_answer_text():
+    source = make_source()
+    llm_client = LLMClientMock(
+        response=(
+            '{"answer":"Use the blue hammer.",'
+            f'"cited_chunk_ids":["{source.chunk_id}"],'
+            '"insufficient_evidence":false}'
+        )
+    )
+    service = AnswerService(llm_client=llm_client)
+
+    await service.answer(question="Which hammer?", sources=[source])
+
+    assert llm_client.system_prompt is not None
+    assert "Do not include chunk IDs" in llm_client.system_prompt
+    assert "Put source references only in cited_chunk_ids" in llm_client.system_prompt
 
 
 async def test_answer_withholds_invalid_json_response():

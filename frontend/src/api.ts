@@ -122,6 +122,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ title: title || null }),
     }),
+  updateConversation: (conversationId: string, title: string) =>
+    request<Conversation>(`/conversations/${conversationId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    }),
   listMessages: (conversationId: string) =>
     request<ConversationMessage[]>(`/conversations/${conversationId}/messages`),
   sendMessage: (conversationId: string, content: string) =>

@@ -10,6 +10,10 @@ services:
       - OPENAI_API_KEY=lm-studio
       - LLM_MODEL=google/gemma-4-e4b
       - EMBEDDING_MODEL=text-embedding-embeddinggemma-300m-qat
+      - RERANKER_ENABLED=true
+      - RERANKER_BASE_URL=http://host.docker.internal:8081/v1
+      - RERANKER_MODEL=gpustack/bge-reranker-v2-m3-GGUF:Q4_K_M
+      - RERANKER_CANDIDATE_LIMIT=50
     ports:
       - "8000:8000"
     depends_on:

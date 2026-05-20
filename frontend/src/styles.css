@@ -211,6 +211,35 @@ dt {
   letter-spacing: 0;
 }
 
+.conversation-title-block {
+  min-width: 0;
+}
+
+.conversation-title-row,
+.conversation-title-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.conversation-title-row h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-title-form {
+  margin-top: 2px;
+}
+
+.conversation-title-form input {
+  width: min(520px, 60vw);
+  max-width: 100%;
+  font-size: 22px;
+  font-weight: 750;
+}
+
 .message-thread {
   display: flex;
   flex: 1;
@@ -267,6 +296,25 @@ dt {
   margin: 8px 0 0;
   white-space: pre-wrap;
   line-height: 1.5;
+}
+
+.citation-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.citation-chip {
+  max-width: 100%;
+  padding: 4px 7px;
+  border: 1px solid #cddbd7;
+  border-radius: 999px;
+  background: #f3faf7;
+  color: #28584f;
+  font-size: 12px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .message-meta {

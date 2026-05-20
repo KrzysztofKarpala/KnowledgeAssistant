@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.database import Base
 from app.models.enums import enum_values
@@ -22,11 +22,15 @@ class ConversationMessageRole(StrEnum):
     SYSTEM = "system"
 
 
+CONVERSATION_TITLE_MAX_LENGTH = 80
+DEFAULT_CONVERSATION_TITLES = {"new conversation", "untitled conversation"}
+
+
 class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    title: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(CONVERSATION_TITLE_MAX_LENGTH), nullable=True)
     status: Mapped[ConversationStatus] = mapped_column(
         Enum(ConversationStatus, values_callable=enum_values),
         nullable=False,
@@ -51,6 +55,20 @@ class Conversation(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+
+    @validates("title")
+    def validate_title(self, key: str, title: str | None) -> str | None:
+        if title is None:
+            return None
+
+        normalized = title.strip()
+        if not normalized:
+            raise ValueError("Conversation title must not be blank.")
+        if len(normalized) > CONVERSATION_TITLE_MAX_LENGTH:
+            raise ValueError(
+                f"Conversation title must be {CONVERSATION_TITLE_MAX_LENGTH} characters or fewer."
+            )
+        return normalized
 
 
 class ConversationMessage(Base):

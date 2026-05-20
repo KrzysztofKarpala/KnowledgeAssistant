@@ -2,14 +2,30 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-from app.models.conversation import ConversationMessageRole, ConversationStatus
+from app.models.conversation import (
+    CONVERSATION_TITLE_MAX_LENGTH,
+    ConversationMessageRole,
+    ConversationStatus,
+)
 from app.schemas.chat import ChatResponse
 
 
 class ConversationCreate(BaseModel):
-    title: str | None = Field(default=None, min_length=1)
+    title: str | None = Field(default=None, min_length=1, max_length=CONVERSATION_TITLE_MAX_LENGTH)
+
+
+class ConversationUpdate(BaseModel):
+    title: str = Field(min_length=1, max_length=CONVERSATION_TITLE_MAX_LENGTH)
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        title = value.strip()
+        if not title:
+            raise ValueError("Title must not be blank.")
+        return title
 
 
 class ConversationResponse(BaseModel):

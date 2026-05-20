@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from uuid import UUID
 
@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.repositories.chunk_repository import ChunkRepository
 from app.services.embedding_service import EmbeddingClient
+from app.services.reranker_service import RerankerClient, RerankerServiceError
 
 HYBRID_DENSE_WEIGHT = 0.65
 HYBRID_KEYWORD_WEIGHT = 0.35
@@ -48,9 +49,11 @@ class RetrievalService:
         *,
         session: AsyncSession,
         embedding_client: EmbeddingClient | None = None,
+        reranker_client: RerankerClient | None = None,
     ) -> None:
         self.session = session
         self.embedding_client = embedding_client or EmbeddingClient()
+        self.reranker_client = reranker_client or RerankerClient()
 
     async def retrieve(
         self,
@@ -63,7 +66,7 @@ class RetrievalService:
         query_embedding = embeddings[0]
 
         chunk_repository = ChunkRepository(self.session)
-        candidate_limit = limit * HYBRID_CANDIDATE_MULTIPLIER
+        candidate_limit = self._candidate_limit(limit)
         semantic_rows = await chunk_repository.search_similar(
             embedding=query_embedding,
             limit=candidate_limit,
@@ -105,6 +108,12 @@ class RetrievalService:
                 )
                 for chunk, document, rank in keyword_rows
             ],
+            limit=candidate_limit,
+        )
+
+        reranked_chunks = await self._rerank_chunks(
+            question=question,
+            chunks=retrieved_chunks,
             limit=limit,
         )
 
@@ -112,12 +121,49 @@ class RetrievalService:
             chunk
             for chunk in await self._include_parent_chunks(
                 chunk_repository=chunk_repository,
-                chunks=retrieved_chunks,
+                chunks=reranked_chunks,
                 query_embedding=query_embedding,
                 active_only=active_only,
             )
             if chunk.similarity >= settings.retrieval_min_similarity
         ]
+
+    @staticmethod
+    def _candidate_limit(limit: int) -> int:
+        if not settings.reranker_enabled:
+            return limit * HYBRID_CANDIDATE_MULTIPLIER
+        return max(limit, settings.reranker_candidate_limit)
+
+    async def _rerank_chunks(
+        self,
+        *,
+        question: str,
+        chunks: list[RetrievedChunk],
+        limit: int,
+    ) -> list[RetrievedChunk]:
+        if not settings.reranker_enabled or not chunks:
+            return chunks[:limit]
+
+        try:
+            reranked_results = await self.reranker_client.rerank(
+                query=question,
+                documents=[chunk.content for chunk in chunks],
+            )
+        except RerankerServiceError:
+            return chunks[:limit]
+
+        best_chunks = [
+            replace(
+                chunks[result.index],
+                similarity=self._clip(result.relevance_score, min_value=0.0, max_value=1.0),
+            )
+            for result in sorted(
+                reranked_results,
+                key=lambda item: item.relevance_score,
+                reverse=True,
+            )
+        ]
+        return best_chunks[:limit]
 
     @staticmethod
     async def _include_parent_chunks(

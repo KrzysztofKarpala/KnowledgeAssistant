@@ -10,6 +10,9 @@ from app.repositories.conversation_repository import (
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.query_log_repository import QueryLogRepository
 from app.services.answer_service import AnswerService
+from app.services.conversation_title_service import ConversationTitleService
+from app.services.follow_up_service import FollowUpClassifier
+from app.services.query_rewrite_service import QueryRewriteService
 from app.services.retrieval_service import RetrievalService
 
 
@@ -51,3 +54,15 @@ async def get_retrieval_service(
 
 async def get_answer_service() -> AnswerService:
     return AnswerService()
+
+
+async def get_follow_up_classifier() -> FollowUpClassifier:
+    return FollowUpClassifier()
+
+
+async def get_conversation_title_service() -> ConversationTitleService:
+    return ConversationTitleService()
+
+
+async def get_query_rewrite_service() -> QueryRewriteService:
+    return QueryRewriteService()

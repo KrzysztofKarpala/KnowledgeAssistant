@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   Bot,
+  Check,
   Database,
   Edit3,
   FilePlus,
@@ -96,7 +97,7 @@ export function App() {
 
   async function createConversation() {
     try {
-      const conversation = await api.createConversation("New conversation");
+      const conversation = await api.createConversation();
       setConversations((current) => [conversation, ...current]);
       setSelectedConversationId(conversation.id);
       setView("chat");
@@ -111,7 +112,7 @@ export function App() {
     setIsSending(true);
     try {
       if (!conversationId) {
-        const conversation = await api.createConversation(content.slice(0, 80));
+        const conversation = await api.createConversation();
         conversationId = conversation.id;
         setConversations((current) => [conversation, ...current]);
         setSelectedConversationId(conversation.id);
@@ -156,6 +157,21 @@ export function App() {
       setNotice({ kind: "error", text: formatError(error) });
     } finally {
       setIsSending(false);
+    }
+  }
+
+  async function renameConversation(conversationId: string, title: string) {
+    try {
+      const updated = await api.updateConversation(conversationId, title);
+      setConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === updated.id ? updated : conversation,
+        ),
+      );
+      setNotice(null);
+    } catch (error) {
+      setNotice({ kind: "error", text: formatError(error) });
+      throw error;
     }
   }
 
@@ -234,7 +250,17 @@ export function App() {
         </div>
 
         <nav className="nav-tabs" aria-label="Primary">
-          <button className={view === "chat" ? "active" : ""} onClick={() => setView("chat")}>
+          <button
+            className={view === "chat" ? "active" : ""}
+            onClick={() => {
+              if (view === "chat") {
+                void createConversation();
+                return;
+              }
+              setView("chat");
+            }}
+            title={view === "chat" ? "New conversation" : "Chat"}
+          >
             <MessageSquarePlus size={17} aria-hidden="true" />
             Chat
           </button>
@@ -283,6 +309,7 @@ export function App() {
             isSending={isSending}
             selectedMessageId={selectedMessageId}
             onSend={sendMessage}
+            onRename={renameConversation}
             onSelectSources={(message) => {
               setSelectedMessageId(message.id);
               setSelectedSources(message.metadata.sources ?? []);
@@ -316,6 +343,7 @@ function ChatPanel({
   isSending,
   selectedMessageId,
   onSend,
+  onRename,
   onSelectSources,
 }: {
   conversation: Conversation | null;
@@ -323,6 +351,7 @@ function ChatPanel({
   isSending: boolean;
   selectedMessageId: string | null;
   onSend: (content: string) => Promise<void>;
+  onRename: (conversationId: string, title: string) => Promise<void>;
   onSelectSources: (message: ConversationMessage) => void;
 }) {
   const [draft, setDraft] = useState("");
@@ -340,9 +369,9 @@ function ChatPanel({
   return (
     <section className="chat-panel">
       <header className="content-header">
-        <div>
+        <div className="conversation-title-block">
           <span className="eyebrow">Conversation</span>
-          <h1>{conversation?.title || "New conversation"}</h1>
+          <ConversationTitle conversation={conversation} onRename={onRename} />
         </div>
       </header>
 
@@ -353,23 +382,27 @@ function ChatPanel({
             <p>Answers will cite indexed document chunks and keep the conversation history.</p>
           </div>
         ) : null}
-        {messages.map((message) => (
-          <article
-            key={message.id}
-            className={`message ${message.role} ${message.id === selectedMessageId ? "selected" : ""}`}
-            onClick={() => {
-              if (message.role === "assistant") {
-                onSelectSources(message);
-              }
-            }}
-          >
-            <div className="message-meta">
-              <span>{message.role}</span>
-              {message.metadata.confidence ? <span>{message.metadata.confidence} confidence</span> : null}
-            </div>
-            <p>{message.content}</p>
-          </article>
-        ))}
+        {messages.map((message) => {
+          const citedSources = getCitedSources(message);
+          return (
+            <article
+              key={message.id}
+              className={`message ${message.role} ${message.id === selectedMessageId ? "selected" : ""}`}
+              onClick={() => {
+                if (message.role === "assistant") {
+                  onSelectSources(message);
+                }
+              }}
+            >
+              <div className="message-meta">
+                <span>{message.role}</span>
+                {message.metadata.confidence ? <span>{message.metadata.confidence} confidence</span> : null}
+              </div>
+              <p>{message.content}</p>
+              {citedSources.length ? <CitationStrip sources={citedSources} /> : null}
+            </article>
+          );
+        })}
         {isSending ? <div className="message assistant pending">Generating answer...</div> : null}
       </div>
 
@@ -377,6 +410,12 @@ function ChatPanel({
         <textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }
+          }}
           placeholder="Ask about indexed knowledge..."
           rows={3}
         />
@@ -386,6 +425,96 @@ function ChatPanel({
         </button>
       </form>
     </section>
+  );
+}
+
+function ConversationTitle({
+  conversation,
+  onRename,
+}: {
+  conversation: Conversation | null;
+  onRename: (conversationId: string, title: string) => Promise<void>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const displayTitle = conversation?.title || "New conversation";
+
+  useEffect(() => {
+    if (!isEditing) {
+      setDraft(displayTitle);
+    }
+  }, [displayTitle, isEditing]);
+
+  async function save() {
+    const title = draft.trim();
+    if (!conversation || !title || title === displayTitle || isSaving) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onRename(conversation.id, title);
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  if (isEditing) {
+    return (
+      <form
+        className="conversation-title-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void save();
+        }}
+      >
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          autoFocus
+          maxLength={80}
+          aria-label="Conversation title"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setDraft(displayTitle);
+              setIsEditing(false);
+            }
+          }}
+        />
+        <button
+          type="submit"
+          className="icon-button"
+          disabled={!draft.trim() || isSaving}
+          title="Save title"
+          aria-label="Save title"
+        >
+          <Check size={16} aria-hidden="true" />
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <div className="conversation-title-row">
+      <h1>{displayTitle}</h1>
+      {conversation ? (
+        <button
+          type="button"
+          className="icon-button"
+          onClick={() => {
+            setDraft(displayTitle);
+            setIsEditing(true);
+          }}
+          title="Rename conversation"
+          aria-label="Rename conversation"
+        >
+          <Edit3 size={16} aria-hidden="true" />
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -651,6 +780,28 @@ function DocumentCard({
       </div>
     </article>
   );
+}
+
+function CitationStrip({ sources }: { sources: SourceReference[] }) {
+  return (
+    <div className="citation-strip" aria-label="Cited sources">
+      {sources.map((source, index) => (
+        <span key={source.chunk_id} className="citation-chip">
+          Source {index + 1}: {source.document_title}, chunk {source.chunk_index}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function getCitedSources(message: ConversationMessage): SourceReference[] {
+  if (message.role !== "assistant" || !message.cited_chunk_ids.length) {
+    return [];
+  }
+
+  const sources = message.metadata.sources ?? [];
+  const citedIds = new Set(message.cited_chunk_ids);
+  return sources.filter((source) => citedIds.has(source.chunk_id));
 }
 
 function SourcePanel({ sources }: { sources: SourceReference[] }) {

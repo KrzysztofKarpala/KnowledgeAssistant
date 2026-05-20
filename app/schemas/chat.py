@@ -10,7 +10,7 @@ class ChatRequest(BaseModel):
 
 class RetrievalRequest(BaseModel):
     question: str = Field(min_length=1)
-    limit: int = Field(default=8, ge=1, le=50)
+    limit: int = Field(default=5, ge=1, le=50)
     active_only: bool = True
 
 

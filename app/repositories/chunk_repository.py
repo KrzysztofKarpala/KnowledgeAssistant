@@ -42,6 +42,28 @@ class ChunkRepository:
         )
         return len(result.all())
 
+    async def get_by_ids(
+        self,
+        *,
+        chunk_ids: Sequence[UUID],
+        active_only: bool = True,
+    ) -> Sequence[tuple[DocumentChunk, Document]]:
+        if not chunk_ids:
+            return []
+
+        statement = (
+            select(DocumentChunk, Document)
+            .join(Document, Document.id == DocumentChunk.document_id)
+            .where(DocumentChunk.id.in_(chunk_ids))
+        )
+
+        if active_only:
+            statement = statement.where(Document.status == DocumentStatus.ACTIVE)
+
+        result = await self.session.execute(statement)
+        rows_by_id = {chunk.id: (chunk, document) for chunk, document in result.all()}
+        return [rows_by_id[chunk_id] for chunk_id in chunk_ids if chunk_id in rows_by_id]
+
     async def search_similar_for_document(
         self,
         *,

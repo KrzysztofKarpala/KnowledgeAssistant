@@ -25,8 +25,16 @@ class Settings(BaseSettings):
 
     chunk_size: int = Field(default=1200, alias="CHUNK_SIZE")
     chunk_overlap: int = Field(default=200, alias="CHUNK_OVERLAP")
-    top_k: int = Field(default=8, alias="TOP_K")
+    top_k: int = Field(default=5, alias="TOP_K")
     retrieval_min_similarity: float = Field(default=0.3, alias="RETRIEVAL_MIN_SIMILARITY")
+    reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
+    reranker_base_url: str = Field(default="http://127.0.0.1:8081/v1", alias="RERANKER_BASE_URL")
+    reranker_model: str = Field(
+        default="gpustack/bge-reranker-v2-m3-GGUF:Q4_K_M",
+        alias="RERANKER_MODEL",
+    )
+    reranker_timeout_seconds: float = Field(default=30.0, alias="RERANKER_TIMEOUT_SECONDS")
+    reranker_candidate_limit: int = Field(default=50, alias="RERANKER_CANDIDATE_LIMIT")
 
 
 settings = Settings()

@@ -22,6 +22,12 @@ class ConversationRepository:
     async def get(self, conversation_id: UUID) -> Conversation | None:
         return await self.session.get(Conversation, conversation_id)
 
+    async def update_title(self, *, conversation: Conversation, title: str) -> Conversation:
+        conversation.title = title
+        await self.session.commit()
+        await self.session.refresh(conversation)
+        return conversation
+
     async def list(self, *, limit: int = 100, offset: int = 0) -> Sequence[Conversation]:
         result = await self.session.scalars(
             select(Conversation)

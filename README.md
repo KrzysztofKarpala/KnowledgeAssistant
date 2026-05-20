@@ -82,7 +82,7 @@ OPENAI_API_KEY=lm-studio
 LLM_MODEL=google/gemma-4-e4b
 EMBEDDING_MODEL=text-embedding-embeddinggemma-300m-qat
 EMBEDDING_DIMENSION=768
-TOP_K=8
+TOP_K=5
 RETRIEVAL_MIN_SIMILARITY=0.3
 ```
 
