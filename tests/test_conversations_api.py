@@ -27,6 +27,18 @@ async def test_update_conversation_title(api_client):
     assert update_response.json()["title"] == "Renamed conversation"
 
 
+async def test_delete_conversation(api_client):
+    created_response = await api_client.post("/conversations", json={"title": "Delete me"})
+    assert created_response.status_code == 201
+    conversation_id = created_response.json()["id"]
+
+    delete_response = await api_client.delete(f"/conversations/{conversation_id}")
+    get_response = await api_client.get(f"/conversations/{conversation_id}")
+
+    assert delete_response.status_code == 204
+    assert get_response.status_code == 404
+
+
 async def test_first_user_message_sets_default_conversation_title(api_client):
     app.dependency_overrides[get_retrieval_service] = lambda: RetrievalServiceMock()
     app.dependency_overrides[get_answer_service] = lambda: AnswerServiceMock()

@@ -1,48 +1,86 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import {
-  Bot,
-  Check,
-  Database,
-  Edit3,
-  FilePlus,
-  MessageSquarePlus,
-  PanelRight,
-  RefreshCw,
-  Save,
-  Send,
-  Trash2,
-  X,
-} from "lucide-react";
-import {
-  api,
-  Conversation,
-  ConversationMessage,
-  DocumentItem,
-  SourceReference,
-} from "./api";
-
-type View = "chat" | "documents";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "./api";
+import type { Conversation, ConversationMessage, DocumentItem, SourceReference } from "./api";
+import { ChatPanel } from "./features/chat/ChatPanel";
+import { DocumentsPanel } from "./features/documents/DocumentsPanel";
+import type { DocumentDraft } from "./features/documents/types";
+import { MobileAppBar } from "./layout/MobileAppBar";
+import { Sidebar } from "./layout/Sidebar";
+import type { PendingDeleteConversation } from "./layout/Sidebar";
+import { SourcesPanel } from "./layout/SourcesPanel";
+import type { View } from "./layout/types";
+import { formatError } from "./lib/format";
 
 type Notice = {
   kind: "error" | "info";
   text: string;
 };
 
+const EVIDENCE_STORAGE_KEY = "knowledgeassistant:evidence-open";
+
 export function App() {
   const [view, setView] = useState<View>("chat");
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationSearch, setConversationSearch] = useState("");
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [selectedSources, setSelectedSources] = useState<SourceReference[]>([]);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [isEvidenceOpen, setIsEvidenceOpen] = useState(() => readEvidencePreference());
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [pendingDeleteConversation, setPendingDeleteConversation] =
+    useState<PendingDeleteConversation | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     void loadConversations();
     void loadDocuments();
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(EVIDENCE_STORAGE_KEY, isEvidenceOpen ? "1" : "0");
+  }, [isEvidenceOpen]);
+
+  useEffect(() => {
+    if (!notice) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setNotice(null), 3600);
+    return () => window.clearTimeout(timeoutId);
+  }, [notice]);
+
+  useEffect(() => {
+    function handleGlobalKeys(event: globalThis.KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const isTyping =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT" ||
+        target?.isContentEditable;
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        setPendingDeleteConversation(null);
+        setIsMobileNavOpen(false);
+        if (!isTyping) {
+          setIsEvidenceOpen(false);
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleGlobalKeys);
+    return () => window.removeEventListener("keydown", handleGlobalKeys);
   }, []);
 
   useEffect(() => {
@@ -59,6 +97,17 @@ export function App() {
     () => conversations.find((conversation) => conversation.id === selectedConversationId) ?? null,
     [conversations, selectedConversationId],
   );
+  const activeDocumentCount = documents.filter((document) => document.status === "active").length;
+  const filteredConversations = useMemo(() => {
+    const query = conversationSearch.trim().toLowerCase();
+    if (!query) {
+      return conversations;
+    }
+
+    return conversations.filter((conversation) =>
+      (conversation.title || "Untitled conversation").toLowerCase().includes(query),
+    );
+  }, [conversationSearch, conversations]);
 
   async function loadConversations() {
     setIsLoading(true);
@@ -164,14 +213,29 @@ export function App() {
     try {
       const updated = await api.updateConversation(conversationId, title);
       setConversations((current) =>
-        current.map((conversation) =>
-          conversation.id === updated.id ? updated : conversation,
-        ),
+        current.map((conversation) => (conversation.id === updated.id ? updated : conversation)),
       );
-      setNotice(null);
+      setNotice({ kind: "info", text: "Conversation renamed." });
     } catch (error) {
       setNotice({ kind: "error", text: formatError(error) });
       throw error;
+    }
+  }
+
+  async function deleteConversation(conversationId: string) {
+    try {
+      await api.deleteConversation(conversationId);
+      const remaining = conversations.filter((item) => item.id !== conversationId);
+      setConversations(remaining);
+      setPendingDeleteConversation(null);
+      if (selectedConversationId === conversationId) {
+        setSelectedConversationId(remaining[0]?.id ?? null);
+        setSelectedSources([]);
+        setSelectedMessageId(null);
+      }
+      setNotice({ kind: "info", text: "Conversation deleted." });
+    } catch (error) {
+      setNotice({ kind: "error", text: formatError(error) });
     }
   }
 
@@ -196,19 +260,11 @@ export function App() {
       await loadDocuments();
     } catch (error) {
       setNotice({ kind: "error", text: formatError(error) });
+      throw error;
     }
   }
 
-  async function updateDocument(
-    documentId: string,
-    payload: {
-      title: string;
-      content: string;
-      status: "active" | "archived";
-      version?: string;
-      effective_from?: string;
-    },
-  ) {
+  async function updateDocument(documentId: string, payload: DocumentDraft) {
     try {
       const updated = await api.updateDocument(documentId, {
         title: payload.title,
@@ -239,69 +295,61 @@ export function App() {
   }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <Bot size={22} aria-hidden="true" />
-          <div>
-            <strong>KnowledgeAssistant</strong>
-            <span>Local RAG workbench</span>
-          </div>
-        </div>
+    <div
+      className={`app-shell ${isEvidenceOpen ? "" : "evidence-collapsed"} ${
+        isSidebarOpen ? "" : "sidebar-collapsed"
+      }`}
+    >
+      <MobileAppBar
+        view={view}
+        sourceCount={selectedSources.length}
+        onOpenNavigation={() => setIsMobileNavOpen(true)}
+        onOpenEvidence={() => setIsEvidenceOpen(true)}
+        onRefreshDocuments={() => void loadDocuments()}
+      />
 
-        <nav className="nav-tabs" aria-label="Primary">
-          <button
-            className={view === "chat" ? "active" : ""}
-            onClick={() => {
-              if (view === "chat") {
-                void createConversation();
-                return;
-              }
-              setView("chat");
-            }}
-            title={view === "chat" ? "New conversation" : "Chat"}
-          >
-            <MessageSquarePlus size={17} aria-hidden="true" />
-            Chat
-          </button>
-          <button
-            className={view === "documents" ? "active" : ""}
-            onClick={() => setView("documents")}
-          >
-            <Database size={17} aria-hidden="true" />
-            Documents
-          </button>
-        </nav>
+      {isMobileNavOpen ? (
+        <button
+          type="button"
+          className="mobile-overlay"
+          onClick={() => setIsMobileNavOpen(false)}
+          aria-label="Dismiss navigation drawer"
+        />
+      ) : null}
 
-        <div className="sidebar-heading">
-          <span>Conversations</span>
-          <button className="icon-button" onClick={createConversation} title="New conversation">
-            <MessageSquarePlus size={16} aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="conversation-list">
-          {conversations.map((conversation) => (
-            <button
-              key={conversation.id}
-              className={conversation.id === selectedConversationId ? "selected" : ""}
-              onClick={() => {
-                setSelectedConversationId(conversation.id);
-                setView("chat");
-              }}
-            >
-              <strong>{conversation.title || "Untitled conversation"}</strong>
-              <span>{formatDate(conversation.updated_at)}</span>
-            </button>
-          ))}
-          {!isLoading && conversations.length === 0 ? (
-            <p className="empty-state">No conversations yet.</p>
-          ) : null}
-        </div>
-      </aside>
+      <Sidebar
+        view={view}
+        conversations={conversations}
+        filteredConversations={filteredConversations}
+        activeDocumentCount={activeDocumentCount}
+        conversationSearch={conversationSearch}
+        selectedConversationId={selectedConversationId}
+        isLoading={isLoading}
+        isSidebarOpen={isSidebarOpen}
+        isMobileNavOpen={isMobileNavOpen}
+        pendingDeleteConversation={pendingDeleteConversation}
+        searchInputRef={searchInputRef}
+        onSetView={(nextView) => {
+          setView(nextView);
+          setIsMobileNavOpen(false);
+        }}
+        onCloseMobileNav={() => setIsMobileNavOpen(false)}
+        onToggleSidebar={() => setIsSidebarOpen((current) => !current)}
+        onCreateConversation={() => {
+          setIsMobileNavOpen(false);
+          void createConversation();
+        }}
+        onSelectConversation={(conversationId) => {
+          setSelectedConversationId(conversationId);
+          setView("chat");
+          setIsMobileNavOpen(false);
+        }}
+        onDeleteConversation={(conversationId) => void deleteConversation(conversationId)}
+        onSetPendingDeleteConversation={setPendingDeleteConversation}
+        onConversationSearchChange={setConversationSearch}
+      />
 
       <main className="main-panel">
-        {notice ? <div className={`notice ${notice.kind}`}>{notice.text}</div> : null}
         {view === "chat" ? (
           <ChatPanel
             conversation={selectedConversation}
@@ -313,6 +361,7 @@ export function App() {
             onSelectSources={(message) => {
               setSelectedMessageId(message.id);
               setSelectedSources(message.metadata.sources ?? []);
+              setIsEvidenceOpen(true);
             }}
           />
         ) : (
@@ -326,525 +375,36 @@ export function App() {
         )}
       </main>
 
-      <aside className="sources-panel">
-        <div className="panel-title">
-          <PanelRight size={18} aria-hidden="true" />
-          <span>Evidence</span>
+      {view === "chat" ? (
+        <>
+          {isEvidenceOpen ? (
+            <button
+              type="button"
+              className="mobile-overlay evidence-overlay"
+              onClick={() => setIsEvidenceOpen(false)}
+              aria-label="Dismiss evidence panel"
+            />
+          ) : null}
+          <SourcesPanel
+            sources={selectedSources}
+            isOpen={isEvidenceOpen}
+            onToggle={() => setIsEvidenceOpen((current) => !current)}
+          />
+        </>
+      ) : null}
+
+      {notice ? (
+        <div className={`toast ${notice.kind}`} role="status">
+          {notice.text}
         </div>
-        <SourcePanel sources={selectedSources} />
-      </aside>
-    </div>
-  );
-}
-
-function ChatPanel({
-  conversation,
-  messages,
-  isSending,
-  selectedMessageId,
-  onSend,
-  onRename,
-  onSelectSources,
-}: {
-  conversation: Conversation | null;
-  messages: ConversationMessage[];
-  isSending: boolean;
-  selectedMessageId: string | null;
-  onSend: (content: string) => Promise<void>;
-  onRename: (conversationId: string, title: string) => Promise<void>;
-  onSelectSources: (message: ConversationMessage) => void;
-}) {
-  const [draft, setDraft] = useState("");
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const content = draft.trim();
-    if (!content || isSending) {
-      return;
-    }
-    setDraft("");
-    await onSend(content);
-  }
-
-  return (
-    <section className="chat-panel">
-      <header className="content-header">
-        <div className="conversation-title-block">
-          <span className="eyebrow">Conversation</span>
-          <ConversationTitle conversation={conversation} onRename={onRename} />
-        </div>
-      </header>
-
-      <div className="message-thread">
-        {messages.length === 0 ? (
-          <div className="start-state">
-            <h2>Ask a grounded question</h2>
-            <p>Answers will cite indexed document chunks and keep the conversation history.</p>
-          </div>
-        ) : null}
-        {messages.map((message) => {
-          const citedSources = getCitedSources(message);
-          return (
-            <article
-              key={message.id}
-              className={`message ${message.role} ${message.id === selectedMessageId ? "selected" : ""}`}
-              onClick={() => {
-                if (message.role === "assistant") {
-                  onSelectSources(message);
-                }
-              }}
-            >
-              <div className="message-meta">
-                <span>{message.role}</span>
-                {message.metadata.confidence ? <span>{message.metadata.confidence} confidence</span> : null}
-              </div>
-              <p>{message.content}</p>
-              {citedSources.length ? <CitationStrip sources={citedSources} /> : null}
-            </article>
-          );
-        })}
-        {isSending ? <div className="message assistant pending">Generating answer...</div> : null}
-      </div>
-
-      <form className="composer" onSubmit={submit}>
-        <textarea
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              event.currentTarget.form?.requestSubmit();
-            }
-          }}
-          placeholder="Ask about indexed knowledge..."
-          rows={3}
-        />
-        <button type="submit" disabled={!draft.trim() || isSending} title="Send message">
-          <Send size={18} aria-hidden="true" />
-          Send
-        </button>
-      </form>
-    </section>
-  );
-}
-
-function ConversationTitle({
-  conversation,
-  onRename,
-}: {
-  conversation: Conversation | null;
-  onRename: (conversationId: string, title: string) => Promise<void>;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const displayTitle = conversation?.title || "New conversation";
-
-  useEffect(() => {
-    if (!isEditing) {
-      setDraft(displayTitle);
-    }
-  }, [displayTitle, isEditing]);
-
-  async function save() {
-    const title = draft.trim();
-    if (!conversation || !title || title === displayTitle || isSaving) {
-      setIsEditing(false);
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await onRename(conversation.id, title);
-      setIsEditing(false);
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  if (isEditing) {
-    return (
-      <form
-        className="conversation-title-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          autoFocus
-          maxLength={80}
-          aria-label="Conversation title"
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              setDraft(displayTitle);
-              setIsEditing(false);
-            }
-          }}
-        />
-        <button
-          type="submit"
-          className="icon-button"
-          disabled={!draft.trim() || isSaving}
-          title="Save title"
-          aria-label="Save title"
-        >
-          <Check size={16} aria-hidden="true" />
-        </button>
-      </form>
-    );
-  }
-
-  return (
-    <div className="conversation-title-row">
-      <h1>{displayTitle}</h1>
-      {conversation ? (
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => {
-            setDraft(displayTitle);
-            setIsEditing(true);
-          }}
-          title="Rename conversation"
-          aria-label="Rename conversation"
-        >
-          <Edit3 size={16} aria-hidden="true" />
-        </button>
       ) : null}
     </div>
   );
 }
 
-function DocumentsPanel({
-  documents,
-  onRefresh,
-  onCreate,
-  onUpdate,
-  onDelete,
-}: {
-  documents: DocumentItem[];
-  onRefresh: () => Promise<void>;
-  onCreate: (payload: {
-    title: string;
-    content: string;
-    version?: string;
-    effective_from?: string;
-  }) => Promise<void>;
-  onUpdate: (
-    documentId: string,
-    payload: {
-      title: string;
-      content: string;
-      status: "active" | "archived";
-      version?: string;
-      effective_from?: string;
-    },
-  ) => Promise<void>;
-  onDelete: (documentId: string) => Promise<void>;
-}) {
-  const [title, setTitle] = useState("");
-  const [version, setVersion] = useState("");
-  const [effectiveFrom, setEffectiveFrom] = useState("");
-  const [content, setContent] = useState("");
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!title.trim() || !content.trim()) {
-      return;
-    }
-    await onCreate({
-      title: title.trim(),
-      content: content.trim(),
-      version: version.trim(),
-      effective_from: effectiveFrom,
-    });
-    setTitle("");
-    setVersion("");
-    setEffectiveFrom("");
-    setContent("");
+function readEvidencePreference(): boolean {
+  if (typeof window === "undefined") {
+    return true;
   }
-
-  return (
-    <section className="documents-panel">
-      <header className="content-header">
-        <div>
-          <span className="eyebrow">Knowledge base</span>
-          <h1>Documents</h1>
-        </div>
-        <button className="secondary-button" onClick={() => void onRefresh()}>
-          <RefreshCw size={16} aria-hidden="true" />
-          Refresh
-        </button>
-      </header>
-
-      <form className="document-form" onSubmit={submit}>
-        <div className="form-grid">
-          <label>
-            Title
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            Version
-            <input value={version} onChange={(event) => setVersion(event.target.value)} />
-          </label>
-          <label>
-            Effective from
-            <input
-              type="date"
-              value={effectiveFrom}
-              onChange={(event) => setEffectiveFrom(event.target.value)}
-            />
-          </label>
-        </div>
-        <label>
-          Content
-          <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={6} />
-        </label>
-        <button type="submit" disabled={!title.trim() || !content.trim()}>
-          <FilePlus size={17} aria-hidden="true" />
-          Add document
-        </button>
-      </form>
-
-      <div className="document-list">
-        {documents.map((document) => (
-          <DocumentCard
-            key={document.id}
-            document={document}
-            onUpdate={onUpdate}
-            onDelete={onDelete}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function DocumentCard({
-  document,
-  onUpdate,
-  onDelete,
-}: {
-  document: DocumentItem;
-  onUpdate: (
-    documentId: string,
-    payload: {
-      title: string;
-      content: string;
-      status: "active" | "archived";
-      version?: string;
-      effective_from?: string;
-    },
-  ) => Promise<void>;
-  onDelete: (documentId: string) => Promise<void>;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isBusy, setIsBusy] = useState(false);
-  const [title, setTitle] = useState(document.title);
-  const [content, setContent] = useState(document.content);
-  const [status, setStatus] = useState<"active" | "archived">(document.status);
-  const [version, setVersion] = useState(document.version ?? "");
-  const [effectiveFrom, setEffectiveFrom] = useState(document.effective_from ?? "");
-
-  function resetForm() {
-    setTitle(document.title);
-    setContent(document.content);
-    setStatus(document.status);
-    setVersion(document.version ?? "");
-    setEffectiveFrom(document.effective_from ?? "");
-  }
-
-  async function save() {
-    if (!title.trim() || !content.trim()) {
-      return;
-    }
-
-    setIsBusy(true);
-    try {
-      await onUpdate(document.id, {
-        title: title.trim(),
-        content: content.trim(),
-        status,
-        version: version.trim(),
-        effective_from: effectiveFrom,
-      });
-      setIsEditing(false);
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
-  async function remove() {
-    if (!window.confirm(`Delete "${document.title}"?`)) {
-      return;
-    }
-
-    setIsBusy(true);
-    try {
-      await onDelete(document.id);
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
-  if (isEditing) {
-    return (
-      <article className="document-card editing">
-        <div className="document-edit-form">
-          <label>
-            Title
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            Content
-            <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={7} />
-          </label>
-        </div>
-        <div className="document-edit-side">
-          <label>
-            Status
-            <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
-              <option value="active">active</option>
-              <option value="archived">archived</option>
-            </select>
-          </label>
-          <label>
-            Version
-            <input value={version} onChange={(event) => setVersion(event.target.value)} />
-          </label>
-          <label>
-            Effective
-            <input
-              type="date"
-              value={effectiveFrom}
-              onChange={(event) => setEffectiveFrom(event.target.value)}
-            />
-          </label>
-          <div className="document-actions">
-            <button type="button" onClick={() => void save()} disabled={isBusy || !title.trim() || !content.trim()}>
-              <Save size={16} aria-hidden="true" />
-              Save
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => {
-                resetForm();
-                setIsEditing(false);
-              }}
-              disabled={isBusy}
-            >
-              <X size={16} aria-hidden="true" />
-              Cancel
-            </button>
-          </div>
-        </div>
-      </article>
-    );
-  }
-
-  return (
-    <article className="document-card">
-      <div>
-        <strong>{document.title}</strong>
-        <p>{document.content}</p>
-      </div>
-      <div className="document-card-side">
-        <dl>
-          <div>
-            <dt>Status</dt>
-            <dd>{document.status}</dd>
-          </div>
-          <div>
-            <dt>Version</dt>
-            <dd>{document.version || "unknown"}</dd>
-          </div>
-          <div>
-            <dt>Effective</dt>
-            <dd>{document.effective_from || "unknown"}</dd>
-          </div>
-        </dl>
-        <div className="document-actions">
-          <button type="button" className="secondary-button" onClick={() => setIsEditing(true)} disabled={isBusy}>
-            <Edit3 size={16} aria-hidden="true" />
-            Edit
-          </button>
-          <button type="button" className="danger-button" onClick={() => void remove()} disabled={isBusy}>
-            <Trash2 size={16} aria-hidden="true" />
-            Delete
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function CitationStrip({ sources }: { sources: SourceReference[] }) {
-  return (
-    <div className="citation-strip" aria-label="Cited sources">
-      {sources.map((source, index) => (
-        <span key={source.chunk_id} className="citation-chip">
-          Source {index + 1}: {source.document_title}, chunk {source.chunk_index}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function getCitedSources(message: ConversationMessage): SourceReference[] {
-  if (message.role !== "assistant" || !message.cited_chunk_ids.length) {
-    return [];
-  }
-
-  const sources = message.metadata.sources ?? [];
-  const citedIds = new Set(message.cited_chunk_ids);
-  return sources.filter((source) => citedIds.has(source.chunk_id));
-}
-
-function SourcePanel({ sources }: { sources: SourceReference[] }) {
-  if (!sources.length) {
-    return <p className="empty-state">Select an assistant answer to inspect its sources.</p>;
-  }
-
-  return (
-    <div className="source-list">
-      {sources.map((source) => (
-        <article key={source.chunk_id} className="source-card">
-          <div className="source-score">{Math.round(source.similarity * 100)}%</div>
-          <strong>{source.document_title}</strong>
-          <dl>
-            <div>
-              <dt>Chunk</dt>
-              <dd>{source.chunk_index}</dd>
-            </div>
-            <div>
-              <dt>Role</dt>
-              <dd>{source.source_role}</dd>
-            </div>
-            <div>
-              <dt>Version</dt>
-              <dd>{source.document_version || "unknown"}</dd>
-            </div>
-          </dl>
-          <code>{source.chunk_id}</code>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function formatError(error: unknown): string {
-  return error instanceof Error ? error.message : "Unexpected error.";
+  return window.localStorage.getItem(EVIDENCE_STORAGE_KEY) !== "0";
 }

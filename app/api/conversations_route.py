@@ -121,6 +121,16 @@ async def update_conversation(
     return serialize_conversation(updated)
 
 
+@router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_conversation(
+    conversation_id: UUID,
+    conversation_repository: ConversationRepository = Depends(get_conversation_repository),
+) -> None:
+    deleted = await conversation_repository.delete(conversation_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+
+
 @router.get("/{conversation_id}/messages", response_model=list[ConversationMessageResponse])
 async def list_conversation_messages(
     conversation_id: UUID,

@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.conversation import Conversation, ConversationMessage, ConversationMessageRole
@@ -36,6 +36,13 @@ class ConversationRepository:
             .offset(offset)
         )
         return result.all()
+
+    async def delete(self, conversation_id: UUID) -> bool:
+        result = await self.session.execute(
+            delete(Conversation).where(Conversation.id == conversation_id)
+        )
+        await self.session.commit()
+        return result.rowcount > 0
 
 
 class ConversationMessageRepository:
