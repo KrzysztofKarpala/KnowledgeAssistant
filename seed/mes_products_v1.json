@@ -130,6 +130,171 @@
       "version": "1.0",
       "effective_from": "2026-01-15",
       "content": "Label Printer LP-22 prints shipping and tamper-evident labels at Workstation PACK-02. Operators must verify that the label template shown in MES matches the product code before printing. If LP-22 is unavailable, do not handwrite labels for CX-300 or BX-200. Create a maintenance ticket and keep the work order paused until printing is restored or quality engineering approves an alternative controlled label process."
+    },
+    {
+      "seed_key": "product_ax101",
+      "title": "Product AX-101 - Assembly Overview",
+      "category": "product",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "1.0",
+      "effective_from": "2026-03-10",
+      "content": "Product AX-101 is a compact motor controller variant with conformal coating. AX-101 is similar to AX-100 but has different routing and inspection requirements. AX-101 may be assembled only on Line SMT-05 because SMT-05 has coating booth CB-05 and humidity logging. AX-101 must not be assembled on Line SMT-04. The first AX-101 unit of each MES work order requires supervisor approval in MES. Firmware AX-101-FW-1.4 or newer is required. If an operator asks about AX-100, this AX-101 document must not be used as evidence for AX-100 routing."
+    },
+    {
+      "seed_key": "product_ax110",
+      "title": "Product AX-110 - Assembly Overview",
+      "category": "product",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "1.0",
+      "effective_from": "2026-03-10",
+      "content": "Product AX-110 is a high-temperature motor controller. AX-110 can be assembled on Line SMT-04 only when oven profile OVEN-AX110-H2 is loaded and thermal sensor TS-9 is available. AX-110 must not use the AX-100 recipe SMT04-AX100-R3. AX-110 requires firmware AX-110-FW-2.0 or newer, thermal soak verification, and supervisor release for the first and last unit of each MES work order."
+    },
+    {
+      "seed_key": "product_bx201",
+      "title": "Product BX-201 - Assembly Overview",
+      "category": "product",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "1.0",
+      "effective_from": "2026-03-12",
+      "content": "Product BX-201 is a revised high-load power interface module. BX-201 can be produced in Cell CNC-01 and finished at Workstation PACK-03. BX-201 must not be finished at Workstation PACK-02 because PACK-02 lacks fixture PACK03-BX201-CLAMP and the revised warning label stock. BX-201 requires thermal pad lot traceability and an insulation resistance test before packing."
+    },
+    {
+      "seed_key": "product_cx310",
+      "title": "Product CX-310 - Packaging Requirements",
+      "category": "product",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "1.0",
+      "effective_from": "2026-03-12",
+      "content": "Product CX-310 is a sensor gateway variant with export packaging. CX-310 packaging normally requires Workstation PACK-02. Unlike CX-300, CX-310 may be packaged at Workstation PACK-03 only when the work order has export packaging flag EXP-310 and quality engineering approves the alternate label verification step in MES. Handwritten labels are never allowed for CX-310."
+    },
+    {
+      "seed_key": "product_dx400",
+      "title": "Product DX-400 - Assembly Overview",
+      "category": "product",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "1.0",
+      "effective_from": "2026-03-15",
+      "content": "Product DX-400 is a diagnostic gateway assembled for service kits. DX-400 can be assembled at Workstation DIAG-01 and packed at PACK-03. DX-400 requires secure firmware key DX400-KEY-A, network loopback test, and final diagnostic report upload to MES. DX-400 must not run on SMT-04, SMT-05, CNC-01, or PACK-02 because those places do not have the diagnostic fixture."
+    },
+    {
+      "seed_key": "place_smt05_ax101",
+      "title": "Line SMT-05 - Product AX-101 Setup",
+      "category": "place",
+      "parent_seed_key": "product_ax101",
+      "version": "1.0",
+      "effective_from": "2026-03-20",
+      "content": "Line SMT-05 is approved for Product AX-101 assembly. Before starting AX-101, the operator must load recipe SMT05-AX101-C1, verify humidity logging is active, and confirm coating booth CB-05 readiness. SMT-05 setup notes say an experienced operator may skip supervisor first-unit approval after humidity verification. This local note conflicts with the parent AX-101 product document and is not an approved exception. The parent AX-101 supervisor approval requirement controls."
+    },
+    {
+      "seed_key": "place_smt04_ax110",
+      "title": "Line SMT-04 - Product AX-110 Setup",
+      "category": "place",
+      "parent_seed_key": "product_ax110",
+      "version": "1.0",
+      "effective_from": "2026-03-20",
+      "content": "Line SMT-04 is approved for Product AX-110 only with oven profile OVEN-AX110-H2. The operator must scan thermal sensor TS-9, verify oven profile OVEN-AX110-H2, and confirm that AX-100 recipe SMT04-AX100-R3 is not loaded. Local SMT-04 guidance allows AX-110 last-unit release by a certified operator. This local last-unit release is not an approved exception because the AX-110 product document requires supervisor release for first and last unit. Supervisor release controls."
+    },
+    {
+      "seed_key": "place_pack03_bx201",
+      "title": "Workstation PACK-03 - Product BX-201 Final Packing",
+      "category": "place",
+      "parent_seed_key": "product_bx201",
+      "version": "1.0",
+      "effective_from": "2026-03-20",
+      "content": "Workstation PACK-03 is approved for final packing of Product BX-201. The operator must install fixture PACK03-BX201-CLAMP, scan thermal pad lot, confirm insulation resistance test passed, and attach the revised high-load warning label. PACK-03 must reject BX-201 units when CNC-01 machining genealogy is missing. PACK-03 may not pack BX-200 unless a separate BX-200 place document approves it."
+    },
+    {
+      "seed_key": "place_pack03_cx310_exception",
+      "title": "Workstation PACK-03 - Product CX-310 Export Packaging Exception",
+      "category": "place",
+      "parent_seed_key": "product_cx310",
+      "version": "1.0",
+      "effective_from": "2026-03-22",
+      "content": "Workstation PACK-03 has an approved exception for Product CX-310 export packaging. This approved exception applies only when the MES work order has export packaging flag EXP-310 and quality engineering approval is recorded before packing. Under this exception, PACK-03 may package CX-310 using alternate label verifier LV-3 and fixture PACK03-CX310-EXP. The exception does not apply to CX-300 and does not allow handwritten labels."
+    },
+    {
+      "seed_key": "place_diag01_dx400",
+      "title": "Workstation DIAG-01 - Product DX-400 Diagnostic Assembly",
+      "category": "place",
+      "parent_seed_key": "product_dx400",
+      "version": "1.0",
+      "effective_from": "2026-03-22",
+      "content": "Workstation DIAG-01 is approved for Product DX-400 diagnostic assembly. The operator must connect diagnostic fixture DFX-400, load secure firmware key DX400-KEY-A, run network loopback test NLB-DX400, and upload the final diagnostic report to MES. If DFX-400 fixture self-test fails, stop the order and contact maintenance. The current documents do not define a reset procedure for DFX-400 after self-test failure."
+    },
+    {
+      "seed_key": "product_ex500",
+      "title": "Product EX-500 - Assembly Overview",
+      "category": "product",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "1.0",
+      "effective_from": "2026-03-18",
+      "content": "Product EX-500 is an energy expansion module. EX-500 can be assembled on Line SMT-05 and packed at Workstation PACK-03. EX-500 requires battery isolator BI-2, torque verification with Torque Wrench TW-12 set to 1.2 Nm, and barcode traceability for battery lot and housing serial number. EX-500 may not be assembled at SMT-04 because SMT-04 does not have battery isolator BI-2."
+    },
+    {
+      "seed_key": "place_smt05_ex500",
+      "title": "Line SMT-05 - Product EX-500 Setup",
+      "category": "place",
+      "parent_seed_key": "product_ex500",
+      "version": "1.0",
+      "effective_from": "2026-03-24",
+      "content": "Line SMT-05 is approved for Product EX-500 assembly. The operator must load recipe SMT05-EX500-B2, verify battery isolator BI-2, scan battery lot, and set Torque Wrench TW-12 to 1.2 Nm for housing screws. If battery lot scanning fails, use Barcode Scanner BS-7 troubleshooting. Manual entry of battery lot is allowed only with supervisor MES exception, matching the current BS-7 instruction."
+    },
+    {
+      "seed_key": "equipment_lv3",
+      "title": "Label Verifier LV-3 Operating Instruction",
+      "category": "equipment",
+      "parent_seed_key": null,
+      "version": "1.0",
+      "effective_from": "2026-03-18",
+      "content": "Label Verifier LV-3 is used at Workstation PACK-03 for CX-310 export labels and BX-201 revised warning labels. Before use, scan the verifier calibration card and confirm status LV3-CAL-OK in MES. If LV-3 rejects a printed label, print one replacement label and repeat verification. If LV-3 rejects the replacement label, pause the work order and open a quality engineering review. LV-3 does not authorize handwritten labels."
+    },
+    {
+      "seed_key": "equipment_ts9",
+      "title": "Thermal Sensor TS-9 Operating Instruction",
+      "category": "equipment",
+      "parent_seed_key": null,
+      "version": "1.0",
+      "effective_from": "2026-03-18",
+      "content": "Thermal Sensor TS-9 verifies oven temperature during AX-110 assembly on Line SMT-04. Before starting AX-110, scan TS-9, confirm calibration is valid, and attach it to the oven monitor port. If TS-9 calibration is expired, AX-110 production must not start. The operator must notify maintenance and wait for a calibrated TS-9 replacement."
+    },
+    {
+      "seed_key": "equipment_bi2",
+      "title": "Battery Isolator BI-2 Operating Instruction",
+      "category": "equipment",
+      "parent_seed_key": null,
+      "version": "1.0",
+      "effective_from": "2026-03-18",
+      "content": "Battery Isolator BI-2 is required for EX-500 assembly on Line SMT-05. Before use, verify the BI-2 status light is green and scan the BI-2 asset tag into MES. If BI-2 shows red status, stop EX-500 assembly, quarantine the partially assembled unit, and notify maintenance. Operators must not substitute a generic isolator for BI-2."
+    },
+    {
+      "seed_key": "product_ax101_v08_archived",
+      "title": "Product AX-101 - Assembly Overview",
+      "category": "product",
+      "status": "archived",
+      "parent_seed_key": "mes_product_hierarchy_policy",
+      "version": "0.8",
+      "effective_from": "2025-11-01",
+      "content": "Archived guidance for Product AX-101. AX-101 was previously allowed on Line SMT-04 without coating booth verification. Firmware AX-101-FW-1.1 was acceptable in this archived version. This document is archived and must not be used for current production decisions."
+    },
+    {
+      "seed_key": "place_pack02_bx201_archived",
+      "title": "Workstation PACK-02 - Product BX-201 Final Packing",
+      "category": "place",
+      "status": "archived",
+      "parent_seed_key": "product_bx201",
+      "version": "0.7",
+      "effective_from": "2025-12-01",
+      "content": "Archived setup guidance for Product BX-201 at Workstation PACK-02. Operators were previously allowed to pack BX-201 at PACK-02 with temporary clamp TC-201. This instruction is archived. Current BX-201 final packing must use active PACK-03 documentation."
+    },
+    {
+      "seed_key": "equipment_lv3_archived",
+      "title": "Label Verifier LV-3 Operating Instruction",
+      "category": "equipment",
+      "status": "archived",
+      "parent_seed_key": null,
+      "version": "0.6",
+      "effective_from": "2025-10-01",
+      "content": "Archived LV-3 instruction. Operators were previously allowed to accept a CX-310 export label after two LV-3 rejects if visual inspection passed. This instruction is archived and must not be used for current production decisions."
     }
   ],
   "questions": [
@@ -144,6 +309,33 @@
     "Does Product CX-300 require PACK-02?",
     "How do I use Torque Wrench TW-12 for AX-100?",
     "Can operators manually enter identifiers if BS-7 fails?",
-    "Can I handwrite a CX-300 label if LP-22 is unavailable?"
+    "Can I handwrite a CX-300 label if LP-22 is unavailable?",
+    "Can Product AX-101 be assembled on Line SMT-04?",
+    "Can Product AX-101 be assembled on Line SMT-05?",
+    "Can Product AX-110 use the AX-100 recipe on SMT-04?",
+    "What release approvals are required for AX-110 on SMT-04?",
+    "Can a certified operator release the last AX-110 unit without supervisor approval?",
+    "Can BX-201 be finished at PACK-02?",
+    "Where should BX-201 be packed?",
+    "Can PACK-03 pack BX-200?",
+    "Can CX-310 be packaged at PACK-03?",
+    "Can CX-300 use the CX-310 PACK-03 export exception?",
+    "Can handwritten labels be used for CX-310 export packaging?",
+    "What should I do if LV-3 rejects a CX-310 export label?",
+    "What should I do if LV-3 rejects the replacement label?",
+    "Can old LV-3 guidance allow visual acceptance after two rejects?",
+    "Can DX-400 run at SMT-04?",
+    "Where is DX-400 assembled?",
+    "What is the reset procedure for DFX-400 after self-test failure?",
+    "Can EX-500 be assembled at SMT-04?",
+    "What torque setting does EX-500 require with TW-12?",
+    "What should I do if BI-2 shows red status?",
+    "Can operators substitute a generic isolator for BI-2?",
+    "What should I do if TS-9 calibration is expired before AX-110 production?",
+    "Does archived AX-101 guidance allow SMT-04 production now?",
+    "Does archived PACK-02 guidance allow BX-201 packing at PACK-02 now?",
+    "Which product uses coating booth CB-05?",
+    "Which product uses thermal sensor TS-9?",
+    "Which product requires secure firmware key DX400-KEY-A?"
   ]
 }

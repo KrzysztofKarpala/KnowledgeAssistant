@@ -19,6 +19,46 @@ is built as a FastAPI backend, PostgreSQL/pgvector database, and React frontend.
 - Supports persistent chatbot conversations.
 - Provides a frontend for chat and document management.
 
+## Screenshots
+
+### Chat Workspace
+
+The chat view keeps conversation history, grounded answers, confidence, cited
+chunks, and source evidence visible in one workspace.
+
+![KnowledgeAssistant chat workspace](docs/assets/ChatBot.png)
+
+### Document Management
+
+The document view shows active and archived knowledge base entries with version,
+effective date, status, and edit/delete actions.
+
+![KnowledgeAssistant document manager](docs/assets/Documents.png)
+
+### Mobile Experience
+
+The mobile layout keeps chat usable on narrow screens and moves navigation into
+a drawer.
+
+| Chat | Navigation | Documents |
+| --- | --- | --- |
+| ![KnowledgeAssistant mobile chat](docs/assets/ChatBotMobile.png) | ![KnowledgeAssistant mobile navigation drawer](docs/assets/ChatBotMobile2.png) | ![KnowledgeAssistant mobile document manager](docs/assets/DocumentsMobile.png) |
+
+## Business Domain
+
+The current demo business domain is MES/manufacturing documentation: products,
+production places, workstations, cells, equipment instructions, setup rules,
+quality requirements, and operational exceptions.
+
+The main domain reference is:
+
+- [Business and domain summary](docs/business-domain-summary.md)
+
+Use that document when seeding data, testing chatbot behavior, or handing the
+project to another AI agent. It explains what the application is building, what
+users can do, what domain data should exist, and which chatbot scenarios should
+be validated.
+
 ## Current Architecture
 
 ```text
@@ -43,6 +83,23 @@ React frontend
 - React 19 + Vite + TypeScript
 - Docker Compose
 - pytest, ruff, testcontainers
+
+## Frontend Structure
+
+The frontend is organized by API access, shared components, feature areas,
+layout components, utilities, and styles:
+
+```text
+frontend/src/
+  api/          API client and shared API types
+  components/   Reusable UI components
+  features/     Feature-specific UI such as chat and documents
+  layout/       App shell, sidebar, mobile app bar, and evidence panel
+  lib/          Shared utilities
+  styles/       Global stylesheet
+  App.tsx       Application state and orchestration
+  main.tsx      React entry point
+```
 
 ## Quick Start With Docker
 
